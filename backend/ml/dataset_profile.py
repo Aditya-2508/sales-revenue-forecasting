@@ -479,6 +479,108 @@ def profile_quantity(df: pd.DataFrame) -> None:
 
 
 # ============================================================
+# Unit price profiling
+# ============================================================
+
+def profile_unit_price(df: pd.DataFrame) -> None:
+    """Analyze UnitPrice values and extreme prices."""
+
+    print("\n" + "=" * 70)
+    print("UNIT PRICE ANALYSIS")
+    print("=" * 70)
+
+    negative = df[df["UnitPrice"] < 0]
+    zero = df[df["UnitPrice"] == 0]
+    positive = df[df["UnitPrice"] > 0]
+
+    print("\nUnitPrice statistics:")
+    print(df["UnitPrice"].describe().to_string())
+
+    print("\n" + "-" * 70)
+    print("PRICE GROUPS")
+    print("-" * 70)
+
+    print(f"\nNegative UnitPrice rows: {len(negative)}")
+    print(
+        f"Negative percentage: "
+        f"{len(negative) / len(df) * 100:.2f}%"
+    )
+
+    print(f"\nZero UnitPrice rows: {len(zero)}")
+    print(
+        f"Zero percentage: "
+        f"{len(zero) / len(df) * 100:.2f}%"
+    )
+
+    print(f"\nPositive UnitPrice rows: {len(positive)}")
+    print(
+        f"Positive percentage: "
+        f"{len(positive) / len(df) * 100:.2f}%"
+    )
+
+    print("\n" + "-" * 70)
+    print("LARGEST UNIT PRICES")
+    print("-" * 70)
+
+    print(
+        df.nlargest(10, "UnitPrice")[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Description",
+                "Quantity",
+                "InvoiceDate",
+                "UnitPrice",
+                "CustomerID",
+                "Country",
+            ]
+        ].to_string(index=False)
+    )
+
+    print("\n" + "-" * 70)
+    print("ZERO-PRICE TRANSACTIONS")
+    print("-" * 70)
+
+    print(
+        zero[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Description",
+                "Quantity",
+                "InvoiceDate",
+                "UnitPrice",
+                "CustomerID",
+                "Country",
+            ]
+        ].head(20).to_string(index=False)
+    )
+
+    print("\n" + "-" * 70)
+    print("NEGATIVE-PRICE TRANSACTIONS")
+    print("-" * 70)
+
+    if len(negative) > 0:
+        print(
+            negative[
+                [
+                    "InvoiceNo",
+                    "StockCode",
+                    "Description",
+                    "Quantity",
+                    "InvoiceDate",
+                    "UnitPrice",
+                    "CustomerID",
+                    "Country",
+                ]
+            ].head(20).to_string(index=False)
+        )
+    else:
+        print("\nNo negative UnitPrice rows found.")
+
+
+
+# ============================================================
 # Main
 # ============================================================
 
@@ -506,6 +608,8 @@ def main() -> None:
     profile_cancelled_invoices(df)
 
     profile_quantity(df)
+
+    profile_unit_price(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

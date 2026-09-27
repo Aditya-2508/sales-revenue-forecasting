@@ -1365,6 +1365,107 @@ def save_cleaned_sales(df: pd.DataFrame) -> None:
         .to_string()
     )
 
+def validate_cleaned_sales(df: pd.DataFrame) -> None:
+    """Validate the cleaned sales dataset."""
+
+    print("\n" + "=" * 70)
+    print("CLEANED DATA VALIDATION")
+    print("=" * 70)
+
+    invoice_numbers = df["InvoiceNo"].astype(str)
+
+    duplicate_rows = df.duplicated().sum()
+    missing_customer_ids = df["CustomerID"].isna().sum()
+    cancelled_invoices = invoice_numbers.str.startswith("C").sum()
+    non_positive_quantity = (df["Quantity"] <= 0).sum()
+    non_positive_price = (df["UnitPrice"] <= 0).sum()
+    invalid_dates = pd.to_datetime(
+        df["InvoiceDate"],
+        errors="coerce",
+    ).isna()
+
+    revenue_check = (
+        df["Revenue"]
+        == df["Quantity"] * df["UnitPrice"]
+    ).all()
+
+    print("\nValidation checks:")
+
+    print(f"Duplicate rows: {duplicate_rows}")
+    print(f"Missing CustomerID: {missing_customer_ids}")
+    print(f"Cancelled invoices: {cancelled_invoices}")
+    print(f"Non-positive Quantity: {non_positive_quantity}")
+    print(f"Non-positive UnitPrice: {non_positive_price}")
+    print(f"Invalid InvoiceDate: {invalid_dates.sum()}")
+    print(f"Revenue calculation correct: {revenue_check}")
+
+    print("\nDate coverage:")
+
+    print(
+        f"Earliest InvoiceDate: "
+        f"{df['InvoiceDate'].min()}"
+    )
+
+    print(
+        f"Latest InvoiceDate: "
+        f"{df['InvoiceDate'].max()}"
+    )
+
+    print("\nCustomer coverage:")
+
+    print(
+        f"Unique customers: "
+        f"{df['CustomerID'].nunique()}"
+    )
+
+    print("\nProduct coverage:")
+
+    print(
+        f"Unique StockCodes: "
+        f"{df['StockCode'].nunique()}"
+    )
+
+    print("\nCountry coverage:")
+
+    print(
+        f"Unique countries: "
+        f"{df['Country'].nunique()}"
+    )
+
+    print("\nRevenue totals:")
+
+    print(
+        f"Total revenue: "
+        f"{df['Revenue'].sum():.2f}"
+    )
+
+    print(
+        f"Average transaction revenue: "
+        f"{df['Revenue'].mean():.2f}"
+    )
+
+    print(
+        f"Median transaction revenue: "
+        f"{df['Revenue'].median():.2f}"
+    )
+
+    validation_passed = (
+        duplicate_rows == 0
+        and missing_customer_ids == 0
+        and cancelled_invoices == 0
+        and non_positive_quantity == 0
+        and non_positive_price == 0
+        and invalid_dates.sum() == 0
+        and revenue_check
+    )
+
+    print("\nValidation status:")
+
+    if validation_passed:
+        print("PASSED - cleaned dataset satisfies all validation rules.")
+    else:
+        print("FAILED - one or more validation rules were violated.")
+
 
 
 # ============================================================
@@ -1419,6 +1520,8 @@ def main() -> None:
     cleaned_df = clean_sales_data(df)
 
     save_cleaned_sales(cleaned_df)
+
+    validate_cleaned_sales(cleaned_df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

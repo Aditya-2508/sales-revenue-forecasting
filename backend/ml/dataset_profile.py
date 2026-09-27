@@ -760,6 +760,100 @@ def profile_revenue(df: pd.DataFrame) -> None:
         ].to_string(index=False)
     )
 
+def profile_non_standard_transactions(df: pd.DataFrame) -> None:
+    """Profile potentially non-standard transaction records."""
+
+    print("\n" + "=" * 70)
+    print("NON-STANDARD TRANSACTION ANALYSIS")
+    print("=" * 70)
+
+    special_codes = [
+        "AMAZONFEE",
+        "POST",
+        "M",
+        "B",
+        "BANK CHARGES",
+        "D",
+        "S",
+        "DOT",
+        "CRUK",
+    ]
+
+    print("\nSelected non-standard StockCodes:")
+
+    special_mask = df["StockCode"].isin(special_codes)
+
+    special_rows = df.loc[special_mask].copy()
+
+    print(f"Rows matching selected codes: {len(special_rows)}")
+
+    if not special_rows.empty:
+        print("\nCounts by StockCode:")
+
+        print(
+            special_rows["StockCode"]
+            .value_counts()
+            .to_string()
+        )
+
+        print("\nRevenue by StockCode:")
+
+        special_rows["Revenue"] = (
+            special_rows["Quantity"]
+            * special_rows["UnitPrice"]
+        )
+
+        revenue_by_code = (
+            special_rows
+            .groupby("StockCode")["Revenue"]
+            .agg(["count", "sum", "min", "max"])
+            .sort_values("sum", ascending=False)
+        )
+
+        print(revenue_by_code.to_string())
+
+    print("\nStockCodes with missing descriptions:")
+
+    missing_description = df["Description"].isna()
+
+    print(
+        f"Rows with missing Description: "
+        f"{missing_description.sum()}"
+    )
+
+    print(
+        f"Unique StockCodes among missing descriptions: "
+        f"{df.loc[missing_description, 'StockCode'].nunique()}"
+    )
+
+    print("\nRows with zero UnitPrice:")
+
+    zero_price = df["UnitPrice"] == 0
+
+    print(f"Zero-price rows: {zero_price.sum()}")
+
+    print("\nRows with negative Quantity but non-cancelled InvoiceNo:")
+
+    non_cancelled_negative = (
+        (df["Quantity"] < 0)
+        & (~df["InvoiceNo"].astype(str).str.startswith("C"))
+    )
+
+    print(
+        f"Negative-quantity non-cancellation rows: "
+        f"{non_cancelled_negative.sum()}"
+    )
+
+    if non_cancelled_negative.any():
+        print("\nTop descriptions for these rows:")
+
+        print(
+            df.loc[non_cancelled_negative, "Description"]
+            .value_counts(dropna=False)
+            .head(15)
+            .to_string()
+        )
+
 
 
 # ============================================================
@@ -798,6 +892,8 @@ def main() -> None:
     profile_entities(df)
 
     profile_revenue(df)
+
+    profile_non_standard_transactions(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

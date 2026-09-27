@@ -578,6 +578,72 @@ def profile_unit_price(df: pd.DataFrame) -> None:
     else:
         print("\nNo negative UnitPrice rows found.")
 
+# ============================================================
+# Date profiling
+# ============================================================
+
+def profile_dates(df: pd.DataFrame) -> None:
+    """Analyze the InvoiceDate field."""
+
+    print("\n" + "=" * 70)
+    print("DATE ANALYSIS")
+    print("=" * 70)
+
+    invoice_dates = pd.to_datetime(
+        df["InvoiceDate"],
+        errors="coerce",
+    )
+
+    invalid_dates = invoice_dates.isna().sum()
+
+    print(f"\nInvalid InvoiceDate values: {invalid_dates}")
+
+    if invalid_dates == 0:
+        print("All InvoiceDate values are valid datetimes.")
+
+    min_date = invoice_dates.min()
+    max_date = invoice_dates.max()
+
+    print(f"\nEarliest transaction: {min_date}")
+    print(f"Latest transaction:   {max_date}")
+
+    print(
+        f"\nUnique transaction dates: "
+        f"{invoice_dates.dt.date.nunique()}"
+    )
+
+    print(
+        f"Unique months: "
+        f"{invoice_dates.dt.to_period('M').nunique()}"
+    )
+
+    print(
+        f"Unique years: "
+        f"{invoice_dates.dt.year.nunique()}"
+    )
+
+    print("\nTransactions by year:")
+
+    yearly_counts = (
+        invoice_dates
+        .dt.year
+        .value_counts()
+        .sort_index()
+    )
+
+    print(yearly_counts.to_string())
+
+    print("\nTransactions by month:")
+
+    monthly_counts = (
+        invoice_dates
+        .dt.to_period("M")
+        .value_counts()
+        .sort_index()
+    )
+
+    print(monthly_counts.to_string())
+
 
 
 # ============================================================
@@ -610,6 +676,8 @@ def main() -> None:
     profile_quantity(df)
 
     profile_unit_price(df)
+
+    profile_dates(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

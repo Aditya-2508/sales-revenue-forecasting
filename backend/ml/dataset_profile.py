@@ -210,6 +210,162 @@ def profile_duplicates(df: pd.DataFrame) -> None:
     else:
         print("\nNo duplicate rows found.")
 
+
+# ============================================================
+# Cancelled invoice profiling
+# ============================================================
+
+def profile_cancelled_invoices(df: pd.DataFrame) -> None:
+    """Analyze cancelled invoices."""
+
+    print("\n" + "=" * 70)
+    print("CANCELLED INVOICE ANALYSIS")
+    print("=" * 70)
+
+    invoice_numbers = df["InvoiceNo"].astype(str)
+
+    cancelled_mask = invoice_numbers.str.upper().str.startswith("C")
+
+    cancelled_rows = df[cancelled_mask]
+    normal_rows = df[~cancelled_mask]
+
+    # --------------------------------------------------------
+    # Basic counts
+    # --------------------------------------------------------
+
+    cancelled_row_count = len(cancelled_rows)
+    normal_row_count = len(normal_rows)
+
+    cancelled_invoice_count = (
+        cancelled_rows["InvoiceNo"].nunique()
+    )
+
+    normal_invoice_count = (
+        normal_rows["InvoiceNo"].nunique()
+    )
+
+    print(
+        f"\nCancelled transaction rows: "
+        f"{cancelled_row_count}"
+    )
+
+    print(
+        f"Cancelled row percentage: "
+        f"{cancelled_row_count / len(df) * 100:.2f}%"
+    )
+
+    print(
+        f"\nUnique cancelled invoices: "
+        f"{cancelled_invoice_count}"
+    )
+
+    print(
+        f"Unique non-cancelled invoices: "
+        f"{normal_invoice_count}"
+    )
+
+    # --------------------------------------------------------
+    # Quantity analysis
+    # --------------------------------------------------------
+
+    print("\n" + "-" * 70)
+    print("CANCELLED QUANTITY ANALYSIS")
+    print("-" * 70)
+
+    print("\nQuantity statistics for cancelled rows:")
+    print(
+        cancelled_rows["Quantity"].describe().to_string()
+    )
+
+    negative_cancelled = (
+        cancelled_rows["Quantity"] < 0
+    ).sum()
+
+    zero_cancelled = (
+        cancelled_rows["Quantity"] == 0
+    ).sum()
+
+    positive_cancelled = (
+        cancelled_rows["Quantity"] > 0
+    ).sum()
+
+    print(
+        f"\nCancelled rows with negative quantity: "
+        f"{negative_cancelled}"
+    )
+
+    print(
+        f"Cancelled rows with zero quantity: "
+        f"{zero_cancelled}"
+    )
+
+    print(
+        f"Cancelled rows with positive quantity: "
+        f"{positive_cancelled}"
+    )
+
+    # --------------------------------------------------------
+    # Price analysis
+    # --------------------------------------------------------
+
+    print("\n" + "-" * 70)
+    print("CANCELLED PRICE ANALYSIS")
+    print("-" * 70)
+
+    print("\nUnitPrice statistics for cancelled rows:")
+    print(
+        cancelled_rows["UnitPrice"].describe().to_string()
+    )
+
+    # --------------------------------------------------------
+    # Sample cancelled records
+    # --------------------------------------------------------
+
+    print("\n" + "-" * 70)
+    print("SAMPLE CANCELLED RECORDS")
+    print("-" * 70)
+
+    print(
+        cancelled_rows[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Description",
+                "Quantity",
+                "InvoiceDate",
+                "UnitPrice",
+                "CustomerID",
+                "Country",
+            ]
+        ].head(20).to_string(index=False)
+    )
+
+    # --------------------------------------------------------
+    # Non-cancelled comparison
+    # --------------------------------------------------------
+
+    print("\n" + "-" * 70)
+    print("CANCELLED VS NON-CANCELLED")
+    print("-" * 70)
+
+    comparison = pd.DataFrame({
+        "group": [
+            "Cancelled",
+            "Non-cancelled",
+        ],
+        "rows": [
+            cancelled_row_count,
+            normal_row_count,
+        ],
+        "unique_invoices": [
+            cancelled_invoice_count,
+            normal_invoice_count,
+        ],
+    })
+
+    print(comparison.to_string(index=False))
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -235,6 +391,8 @@ def main() -> None:
 
     profile_duplicates(df)
 
+    profile_cancelled_invoices(df)
+
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")
     print("=" * 70)
@@ -242,6 +400,7 @@ def main() -> None:
     print(df.head().to_string(index=False))
 
     print("\nDataset profiling completed successfully.")
+
 
 if __name__ == "__main__":
     main()

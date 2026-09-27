@@ -68,6 +68,97 @@ def profile_schema(df: pd.DataFrame) -> None:
 
     df.info()
 
+# ============================================================
+# Missing-value profiling
+# ============================================================
+
+def profile_missing_values(df: pd.DataFrame) -> None:
+    """Analyze missing values in the dataset."""
+
+    print("\n" + "=" * 70)
+    print("MISSING-VALUE ANALYSIS")
+    print("=" * 70)
+
+    missing = pd.DataFrame({
+        "column": df.columns,
+        "missing_count": df.isna().sum().values,
+        "missing_percentage": (
+            df.isna().mean().values * 100
+        ).round(2),
+    })
+
+    missing = missing.sort_values(
+        by="missing_count",
+        ascending=False,
+    )
+
+    print("\nMissing values by column:")
+    print(missing.to_string(index=False))
+
+    # --------------------------------------------------------
+    # Description
+    # --------------------------------------------------------
+
+    description_missing = df[df["Description"].isna()]
+
+    print("\n" + "-" * 70)
+    print("MISSING DESCRIPTION")
+    print("-" * 70)
+
+    print(
+        f"Rows with missing Description: "
+        f"{len(description_missing)}"
+    )
+
+    print("\nSample records:")
+    print(
+        description_missing[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Quantity",
+                "InvoiceDate",
+                "UnitPrice",
+                "CustomerID",
+                "Country",
+            ]
+        ].head(10).to_string(index=False)
+    )
+
+    # --------------------------------------------------------
+    # CustomerID
+    # --------------------------------------------------------
+
+    customer_missing = df[df["CustomerID"].isna()]
+
+    print("\n" + "-" * 70)
+    print("MISSING CUSTOMER ID")
+    print("-" * 70)
+
+    print(
+        f"Rows with missing CustomerID: "
+        f"{len(customer_missing)}"
+    )
+
+    print(
+        f"Percentage of dataset: "
+        f"{len(customer_missing) / len(df) * 100:.2f}%"
+    )
+
+    print("\nSample records:")
+    print(
+        customer_missing[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Description",
+                "Quantity",
+                "InvoiceDate",
+                "UnitPrice",
+                "Country",
+            ]
+        ].head(10).to_string(index=False)
+    )
 
 # ============================================================
 # Main

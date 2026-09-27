@@ -1044,7 +1044,85 @@ def profile_customer_activity(df: pd.DataFrame) -> None:
         .to_string()
     )
 
+def profile_product_activity(df: pd.DataFrame) -> None:
+    """Analyze transaction activity for products."""
 
+    print("\n" + "=" * 70)
+    print("PRODUCT ACTIVITY ANALYSIS")
+    print("=" * 70)
+
+    product_transactions = (
+        df.groupby("StockCode")
+        .size()
+        .sort_values(ascending=False)
+    )
+
+    print("\nProduct-level coverage:")
+
+    print(
+        f"Unique StockCodes: "
+        f"{df['StockCode'].nunique()}"
+    )
+
+    print("\nTransactions per product:")
+
+    print(
+        product_transactions
+        .describe()
+        .to_string()
+    )
+
+    print("\nTop 10 products by transaction rows:")
+
+    print(
+        product_transactions
+        .head(10)
+        .to_string()
+    )
+
+    product_summary = (
+        df.assign(
+            Revenue=(
+                df["Quantity"]
+                * df["UnitPrice"]
+            )
+        )
+        .groupby("StockCode")
+        .agg(
+            transactions=("StockCode", "size"),
+            total_quantity=("Quantity", "sum"),
+            total_revenue=("Revenue", "sum"),
+            average_unit_price=("UnitPrice", "mean"),
+        )
+    )
+
+    print("\nTop 10 products by total quantity:")
+
+    print(
+        product_summary
+        .sort_values("total_quantity", ascending=False)
+        .head(10)
+        ["total_quantity"]
+        .to_string()
+    )
+
+    print("\nTop 10 products by total revenue:")
+
+    print(
+        product_summary
+        .sort_values("total_revenue", ascending=False)
+        .head(10)
+        ["total_revenue"]
+        .to_string()
+    )
+
+    print("\nProduct-level revenue statistics:")
+
+    print(
+        product_summary["total_revenue"]
+        .describe()
+        .to_string()
+    )
 
 
 # ============================================================
@@ -1089,6 +1167,8 @@ def main() -> None:
     profile_invoice_structure(df)
 
     profile_customer_activity(df)
+
+    profile_product_activity(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

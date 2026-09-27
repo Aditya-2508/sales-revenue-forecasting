@@ -1124,6 +1124,78 @@ def profile_product_activity(df: pd.DataFrame) -> None:
         .to_string()
     )
 
+def profile_country_activity(df: pd.DataFrame) -> None:
+    """Analyze transaction activity by country."""
+
+    print("\n" + "=" * 70)
+    print("COUNTRY ACTIVITY ANALYSIS")
+    print("=" * 70)
+
+    country_summary = (
+        df.assign(
+            Revenue=(
+                df["Quantity"]
+                * df["UnitPrice"]
+            )
+        )
+        .groupby("Country")
+        .agg(
+            transactions=("Country", "size"),
+            unique_customers=("CustomerID", "nunique"),
+            unique_products=("StockCode", "nunique"),
+            total_quantity=("Quantity", "sum"),
+            total_revenue=("Revenue", "sum"),
+        )
+        .sort_values("transactions", ascending=False)
+    )
+
+    print("\nCountry-level coverage:")
+
+    print(
+        f"Unique countries: "
+        f"{df['Country'].nunique()}"
+    )
+
+    print("\nTop 10 countries by transaction rows:")
+
+    print(
+        country_summary
+        .head(10)
+        .to_string()
+    )
+
+    print("\nTop 10 countries by total revenue:")
+
+    print(
+        country_summary
+        .sort_values("total_revenue", ascending=False)
+        .head(10)
+        .to_string()
+    )
+
+    print("\nCountry-level revenue statistics:")
+
+    print(
+        country_summary["total_revenue"]
+        .describe()
+        .to_string()
+    )
+
+    print("\nCountries with negative total revenue:")
+
+    negative_country_revenue = (
+        country_summary[
+            country_summary["total_revenue"] < 0
+        ]
+    )
+
+    print(
+        negative_country_revenue
+        .to_string()
+    )
+
+
+
 
 # ============================================================
 # Main
@@ -1169,6 +1241,8 @@ def main() -> None:
     profile_customer_activity(df)
 
     profile_product_activity(df)
+
+    profile_country_activity(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

@@ -165,7 +165,7 @@ def profile_missing_values(df: pd.DataFrame) -> None:
 # ============================================================
 
 def main() -> None:
-    """Load the dataset and perform initial schema profiling."""
+    """Load the dataset and perform initial profiling."""
 
     df = load_dataset()
 
@@ -181,13 +181,15 @@ def main() -> None:
 
     profile_schema(df)
 
+    profile_missing_values(df)
+
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")
     print("=" * 70)
 
     print(df.head().to_string(index=False))
 
-    print("\nDataset schema profiling completed successfully.")
+    print("\nDataset profiling completed successfully.")
 
 
 if __name__ == "__main__":

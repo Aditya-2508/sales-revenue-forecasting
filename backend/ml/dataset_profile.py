@@ -644,7 +644,60 @@ def profile_dates(df: pd.DataFrame) -> None:
 
     print(monthly_counts.to_string())
 
+def profile_entities(df: pd.DataFrame) -> None:
+    """Analyze unique customers, products, and countries."""
 
+    print("\n" + "=" * 70)
+    print("ENTITY ANALYSIS")
+    print("=" * 70)
+
+    print("\nUnique customers:")
+
+    unique_customers = df["CustomerID"].nunique(dropna=True)
+
+    print(f"Unique CustomerIDs: {unique_customers}")
+
+    print(
+        f"Rows with CustomerID: "
+        f"{df['CustomerID'].notna().sum()}"
+    )
+
+    print(
+        f"Rows without CustomerID: "
+        f"{df['CustomerID'].isna().sum()}"
+    )
+
+    print("\nUnique products:")
+
+    unique_stock_codes = df["StockCode"].nunique()
+
+    print(f"Unique StockCodes: {unique_stock_codes}")
+
+    print("\nUnique countries:")
+
+    unique_countries = df["Country"].nunique()
+
+    print(f"Unique Countries: {unique_countries}")
+
+    print("\nCountries:")
+
+    country_counts = (
+        df["Country"]
+        .value_counts()
+        .sort_values(ascending=False)
+    )
+
+    print(country_counts.to_string())
+
+    print("\nTop 10 products by transaction rows:")
+
+    product_counts = (
+        df["StockCode"]
+        .value_counts()
+        .head(10)
+    )
+
+    print(product_counts.to_string())
 
 # ============================================================
 # Main
@@ -678,6 +731,8 @@ def main() -> None:
     profile_unit_price(df)
 
     profile_dates(df)
+
+    profile_entities(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

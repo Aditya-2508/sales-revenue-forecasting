@@ -1277,7 +1277,93 @@ def profile_cleaning_impact(df: pd.DataFrame) -> None:
         f"{removed_count / len(df) * 100:.2f}%"
     )
 
+def clean_sales_data(df: pd.DataFrame) -> pd.DataFrame:
+    """Create the primary cleaned customer/product sales dataset."""
 
+    non_standard_stock_codes = {
+        "AMAZONFEE",
+        "POST",
+        "M",
+        "D",
+        "S",
+        "BANK CHARGES",
+        "CRUK",
+        "B",
+        "DOT",
+    }
+
+    cleaned_df = df.copy()
+
+    # Remove exact duplicate records.
+    cleaned_df = cleaned_df.drop_duplicates()
+
+    # Convert InvoiceDate safely.
+    cleaned_df["InvoiceDate"] = pd.to_datetime(
+        cleaned_df["InvoiceDate"],
+        errors="coerce",
+    )
+
+    invoice_numbers = cleaned_df["InvoiceNo"].astype(str)
+
+    valid_sale_mask = (
+        cleaned_df["CustomerID"].notna()
+        & cleaned_df["InvoiceDate"].notna()
+        & ~invoice_numbers.str.startswith("C")
+        & (cleaned_df["Quantity"] > 0)
+        & (cleaned_df["UnitPrice"] > 0)
+        & ~cleaned_df["StockCode"].isin(
+            non_standard_stock_codes
+        )
+    )
+
+    cleaned_df = cleaned_df.loc[valid_sale_mask].copy()
+
+    # Calculate transaction-level revenue.
+    cleaned_df["Revenue"] = (
+        cleaned_df["Quantity"]
+        * cleaned_df["UnitPrice"]
+    )
+
+    return cleaned_df
+
+def save_cleaned_sales(df: pd.DataFrame) -> None:
+    """Save the cleaned sales dataset."""
+
+    output_path = (
+        PROJECT_ROOT
+        / "data"
+        / "processed"
+        / "cleaned_sales.csv"
+    )
+
+    output_path.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    df.to_csv(
+        output_path,
+        index=False,
+    )
+
+    print("\n" + "=" * 70)
+    print("CLEANED DATASET")
+    print("=" * 70)
+
+    print(f"\nOutput path: {output_path}")
+    print(f"Rows: {len(df)}")
+    print(f"Columns: {len(df.columns)}")
+
+    print("\nColumns:")
+    print(df.columns.tolist())
+
+    print("\nRevenue statistics:")
+
+    print(
+        df["Revenue"]
+        .describe()
+        .to_string()
+    )
 
 
 
@@ -1329,6 +1415,10 @@ def main() -> None:
     profile_country_activity(df)
 
     profile_cleaning_impact(df)
+
+    cleaned_df = clean_sales_data(df)
+
+    save_cleaned_sales(cleaned_df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

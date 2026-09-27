@@ -161,6 +161,56 @@ def profile_missing_values(df: pd.DataFrame) -> None:
     )
 
 # ============================================================
+# Duplicate profiling
+# ============================================================
+
+def profile_duplicates(df: pd.DataFrame) -> None:
+    """Analyze duplicate records in the dataset."""
+
+    print("\n" + "=" * 70)
+    print("DUPLICATE RECORD ANALYSIS")
+    print("=" * 70)
+
+    duplicate_mask = df.duplicated(keep=False)
+    duplicate_rows = df[duplicate_mask]
+
+    duplicate_count = df.duplicated().sum()
+
+    print(f"\nDuplicate rows excluding first occurrence: {duplicate_count}")
+
+    print(
+        f"Duplicate percentage of dataset: "
+        f"{duplicate_count / len(df) * 100:.2f}%"
+    )
+
+    print(
+        f"\nRows belonging to duplicate groups: "
+        f"{len(duplicate_rows)}"
+    )
+
+    print(
+        f"Duplicate-group row percentage: "
+        f"{len(duplicate_rows) / len(df) * 100:.2f}%"
+    )
+
+    if duplicate_count > 0:
+        print("\nSample duplicate groups:")
+
+        duplicate_rows = duplicate_rows.sort_values(
+            by=[
+                "InvoiceNo",
+                "StockCode",
+                "InvoiceDate",
+            ]
+        )
+
+        print(
+            duplicate_rows.head(20).to_string(index=False)
+        )
+    else:
+        print("\nNo duplicate rows found.")
+
+# ============================================================
 # Main
 # ============================================================
 
@@ -183,6 +233,8 @@ def main() -> None:
 
     profile_missing_values(df)
 
+    profile_duplicates(df)
+
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")
     print("=" * 70)
@@ -190,7 +242,6 @@ def main() -> None:
     print(df.head().to_string(index=False))
 
     print("\nDataset profiling completed successfully.")
-
 
 if __name__ == "__main__":
     main()

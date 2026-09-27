@@ -33,9 +33,40 @@ def load_dataset() -> pd.DataFrame:
             "inside data/raw/."
         )
 
-    df = pd.read_excel(DATASET_PATH)
+    return pd.read_excel(DATASET_PATH)
 
-    return df
+
+# ============================================================
+# Schema profiling
+# ============================================================
+
+def profile_schema(df: pd.DataFrame) -> None:
+    """Display detailed information about the dataset schema."""
+
+    print("\n" + "=" * 70)
+    print("DATASET SCHEMA")
+    print("=" * 70)
+
+    schema = pd.DataFrame({
+        "column": df.columns,
+        "dtype": df.dtypes.astype(str).values,
+        "non_null_count": df.notna().sum().values,
+        "null_count": df.isna().sum().values,
+        "unique_values": df.nunique(dropna=True).values,
+    })
+
+    schema["null_percentage"] = (
+        schema["null_count"] / len(df) * 100
+    ).round(2)
+
+    print("\n")
+    print(schema.to_string(index=False))
+
+    print("\n" + "-" * 70)
+    print("PANDAS INFO")
+    print("-" * 70)
+
+    df.info()
 
 
 # ============================================================
@@ -43,7 +74,7 @@ def load_dataset() -> pd.DataFrame:
 # ============================================================
 
 def main() -> None:
-    """Load the dataset and display basic information."""
+    """Load the dataset and perform initial schema profiling."""
 
     df = load_dataset()
 
@@ -57,13 +88,15 @@ def main() -> None:
     for column in df.columns:
         print(f"  - {column}")
 
-    print("\nData types:")
-    print(df.dtypes)
+    profile_schema(df)
 
-    print("\nFirst 5 records:")
-    print(df.head())
+    print("\n" + "=" * 70)
+    print("FIRST 5 RECORDS")
+    print("=" * 70)
 
-    print("\nDataset loaded successfully.")
+    print(df.head().to_string(index=False))
+
+    print("\nDataset schema profiling completed successfully.")
 
 
 if __name__ == "__main__":

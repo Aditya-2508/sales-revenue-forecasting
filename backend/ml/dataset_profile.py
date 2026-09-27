@@ -699,6 +699,69 @@ def profile_entities(df: pd.DataFrame) -> None:
 
     print(product_counts.to_string())
 
+def profile_revenue(df: pd.DataFrame) -> None:
+    """Analyze transaction-level revenue."""
+
+    print("\n" + "=" * 70)
+    print("REVENUE ANALYSIS")
+    print("=" * 70)
+
+    revenue = df["Quantity"] * df["UnitPrice"]
+
+    print("\nRevenue statistics:")
+
+    print(f"Count:  {revenue.count()}")
+    print(f"Mean:   {revenue.mean():.2f}")
+    print(f"Median: {revenue.median():.2f}")
+    print(f"Min:    {revenue.min():.2f}")
+    print(f"Max:    {revenue.max():.2f}")
+
+    print(f"\nNegative revenue rows: {(revenue < 0).sum()}")
+    print(f"Zero revenue rows: {(revenue == 0).sum()}")
+    print(f"Positive revenue rows: {(revenue > 0).sum()}")
+
+    print("\nLargest positive revenue transactions:")
+
+    positive_revenue = (
+        df.assign(Revenue=revenue)
+        .sort_values("Revenue", ascending=False)
+        .head(10)
+    )
+
+    print(
+        positive_revenue[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Quantity",
+                "UnitPrice",
+                "Revenue",
+            ]
+        ].to_string(index=False)
+    )
+
+    print("\nLargest negative revenue transactions:")
+
+    negative_revenue = (
+        df.assign(Revenue=revenue)
+        .sort_values("Revenue")
+        .head(10)
+    )
+
+    print(
+        negative_revenue[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Quantity",
+                "UnitPrice",
+                "Revenue",
+            ]
+        ].to_string(index=False)
+    )
+
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -733,6 +796,8 @@ def main() -> None:
     profile_dates(df)
 
     profile_entities(df)
+
+    profile_revenue(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

@@ -961,6 +961,92 @@ def profile_invoice_structure(df: pd.DataFrame) -> None:
         f"{(stock_codes_per_invoice == 1).sum()}"
     )
 
+def profile_customer_activity(df: pd.DataFrame) -> None:
+    """Analyze transaction activity for identified customers."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER ACTIVITY ANALYSIS")
+    print("=" * 70)
+
+    customer_df = df[df["CustomerID"].notna()].copy()
+
+    print("\nCustomer-level coverage:")
+
+    print(
+        f"Rows with CustomerID: "
+        f"{len(customer_df)}"
+    )
+
+    print(
+        f"Unique customers: "
+        f"{customer_df['CustomerID'].nunique()}"
+    )
+
+    customer_transactions = (
+        customer_df
+        .groupby("CustomerID")
+        .size()
+    )
+
+    print("\nTransactions per customer:")
+
+    print(
+        customer_transactions
+        .describe()
+        .to_string()
+    )
+
+    print("\nCustomer transaction distribution:")
+
+    print(
+        customer_transactions
+        .value_counts()
+        .sort_index()
+        .head(20)
+        .to_string()
+    )
+
+    print("\nTop 10 customers by transaction rows:")
+
+    print(
+        customer_transactions
+        .sort_values(ascending=False)
+        .head(10)
+        .to_string()
+    )
+
+    customer_revenue = (
+        customer_df
+        .assign(
+            Revenue=(
+                customer_df["Quantity"]
+                * customer_df["UnitPrice"]
+            )
+        )
+        .groupby("CustomerID")["Revenue"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    print("\nTop 10 customers by total transaction revenue:")
+
+    print(
+        customer_revenue
+        .head(10)
+        .to_string()
+    )
+
+    print("\nCustomer-level revenue statistics:")
+
+    print(
+        customer_revenue
+        .describe()
+        .to_string()
+    )
+
+
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -1001,6 +1087,8 @@ def main() -> None:
     profile_non_standard_transactions(df)
 
     profile_invoice_structure(df)
+
+    profile_customer_activity(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

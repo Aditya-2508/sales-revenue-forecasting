@@ -1194,6 +1194,90 @@ def profile_country_activity(df: pd.DataFrame) -> None:
         .to_string()
     )
 
+def profile_cleaning_impact(df: pd.DataFrame) -> None:
+    """Estimate the impact of proposed cleaning rules."""
+
+    print("\n" + "=" * 70)
+    print("CLEANING IMPACT ANALYSIS")
+    print("=" * 70)
+
+    invoice_numbers = df["InvoiceNo"].astype(str)
+
+    non_standard_stock_codes = {
+        "AMAZONFEE",
+        "POST",
+        "M",
+        "D",
+        "S",
+        "BANK CHARGES",
+        "CRUK",
+        "B",
+        "DOT",
+    }
+
+    rules = {
+        "Missing CustomerID": df["CustomerID"].isna(),
+        "Cancelled Invoice": invoice_numbers.str.startswith("C"),
+        "Non-positive Quantity": df["Quantity"] <= 0,
+        "Non-positive UnitPrice": df["UnitPrice"] <= 0,
+        "Non-standard StockCode": df["StockCode"].isin(
+            non_standard_stock_codes
+        ),
+        "Invalid InvoiceDate": pd.to_datetime(
+            df["InvoiceDate"],
+            errors="coerce",
+        ).isna(),
+    }
+
+    print("\nRows affected by individual rules:")
+
+    for rule_name, mask in rules.items():
+        count = mask.sum()
+        percentage = count / len(df) * 100
+
+        print(
+            f"{rule_name}: "
+            f"{count} rows ({percentage:.2f}%)"
+        )
+
+    valid_sale_mask = (
+        df["CustomerID"].notna()
+        & ~invoice_numbers.str.startswith("C")
+        & (df["Quantity"] > 0)
+        & (df["UnitPrice"] > 0)
+        & ~df["StockCode"].isin(non_standard_stock_codes)
+        & pd.to_datetime(
+            df["InvoiceDate"],
+            errors="coerce",
+        ).notna()
+    )
+
+    valid_count = valid_sale_mask.sum()
+    removed_count = len(df) - valid_count
+
+    print("\nCombined proposed valid-sale dataset:")
+
+    print(
+        f"Valid sale rows: "
+        f"{valid_count}"
+    )
+
+    print(
+        f"Rows excluded: "
+        f"{removed_count}"
+    )
+
+    print(
+        f"Percentage retained: "
+        f"{valid_count / len(df) * 100:.2f}%"
+    )
+
+    print(
+        f"Percentage excluded: "
+        f"{removed_count / len(df) * 100:.2f}%"
+    )
+
+
 
 
 
@@ -1243,6 +1327,8 @@ def main() -> None:
     profile_product_activity(df)
 
     profile_country_activity(df)
+
+    profile_cleaning_impact(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

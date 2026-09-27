@@ -854,7 +854,112 @@ def profile_non_standard_transactions(df: pd.DataFrame) -> None:
             .to_string()
         )
 
+def profile_invoice_structure(df: pd.DataFrame) -> None:
+    """Analyze invoice-level transaction structure."""
 
+    print("\n" + "=" * 70)
+    print("INVOICE STRUCTURE ANALYSIS")
+    print("=" * 70)
+
+    invoice_numbers = df["InvoiceNo"].astype(str)
+
+    cancelled_mask = invoice_numbers.str.startswith("C")
+
+    print("\nInvoice counts:")
+
+    print(
+        f"Unique invoices: "
+        f"{df['InvoiceNo'].nunique()}"
+    )
+
+    print(
+        f"Unique cancelled invoices: "
+        f"{df.loc[cancelled_mask, 'InvoiceNo'].nunique()}"
+    )
+
+    print(
+        f"Unique non-cancelled invoices: "
+        f"{df.loc[~cancelled_mask, 'InvoiceNo'].nunique()}"
+    )
+
+    print("\nRows per invoice:")
+
+    rows_per_invoice = df.groupby("InvoiceNo").size()
+
+    print(
+        f"Mean rows per invoice: "
+        f"{rows_per_invoice.mean():.2f}"
+    )
+
+    print(
+        f"Median rows per invoice: "
+        f"{rows_per_invoice.median():.2f}"
+    )
+
+    print(
+        f"Minimum rows per invoice: "
+        f"{rows_per_invoice.min()}"
+    )
+
+    print(
+        f"Maximum rows per invoice: "
+        f"{rows_per_invoice.max()}"
+    )
+
+    print("\nInvoice row-count distribution:")
+
+    print(
+        rows_per_invoice
+        .value_counts()
+        .sort_index()
+        .head(20)
+        .to_string()
+    )
+
+    print("\nCancelled invoices by number of rows:")
+
+    cancelled_rows_per_invoice = (
+        df.loc[cancelled_mask]
+        .groupby("InvoiceNo")
+        .size()
+    )
+
+    print(
+        cancelled_rows_per_invoice
+        .describe()
+        .to_string()
+    )
+
+    print("\nNon-cancelled invoices by number of rows:")
+
+    normal_rows_per_invoice = (
+        df.loc[~cancelled_mask]
+        .groupby("InvoiceNo")
+        .size()
+    )
+
+    print(
+        normal_rows_per_invoice
+        .describe()
+        .to_string()
+    )
+
+    print("\nInvoices containing multiple StockCodes:")
+
+    stock_codes_per_invoice = (
+        df.groupby("InvoiceNo")["StockCode"]
+        .nunique()
+    )
+
+    print(
+        f"Invoices with more than one StockCode: "
+        f"{(stock_codes_per_invoice > 1).sum()}"
+    )
+
+    print(
+        f"Invoices with exactly one StockCode: "
+        f"{(stock_codes_per_invoice == 1).sum()}"
+    )
 
 # ============================================================
 # Main
@@ -894,6 +999,8 @@ def main() -> None:
     profile_revenue(df)
 
     profile_non_standard_transactions(df)
+
+    profile_invoice_structure(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

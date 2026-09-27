@@ -365,6 +365,118 @@ def profile_cancelled_invoices(df: pd.DataFrame) -> None:
 
     print(comparison.to_string(index=False))
 
+# ============================================================
+# Quantity profiling
+# ============================================================
+
+def profile_quantity(df: pd.DataFrame) -> None:
+    """Analyze quantity values and extreme quantities."""
+
+    print("\n" + "=" * 70)
+    print("QUANTITY ANALYSIS")
+    print("=" * 70)
+
+    negative = df[df["Quantity"] < 0]
+    zero = df[df["Quantity"] == 0]
+    positive = df[df["Quantity"] > 0]
+
+    print("\nQuantity statistics:")
+    print(df["Quantity"].describe().to_string())
+
+    print("\n" + "-" * 70)
+    print("QUANTITY GROUPS")
+    print("-" * 70)
+
+    print(f"\nNegative quantity rows: {len(negative)}")
+    print(
+        f"Negative percentage: "
+        f"{len(negative) / len(df) * 100:.2f}%"
+    )
+
+    print(f"\nZero quantity rows: {len(zero)}")
+    print(
+        f"Zero percentage: "
+        f"{len(zero) / len(df) * 100:.2f}%"
+    )
+
+    print(f"\nPositive quantity rows: {len(positive)}")
+    print(
+        f"Positive percentage: "
+        f"{len(positive) / len(df) * 100:.2f}%"
+    )
+
+    print("\n" + "-" * 70)
+    print("LARGEST POSITIVE QUANTITIES")
+    print("-" * 70)
+
+    print(
+        df.nlargest(10, "Quantity")[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Description",
+                "Quantity",
+                "InvoiceDate",
+                "UnitPrice",
+                "CustomerID",
+                "Country",
+            ]
+        ].to_string(index=False)
+    )
+
+    print("\n" + "-" * 70)
+    print("LARGEST NEGATIVE QUANTITIES")
+    print("-" * 70)
+
+    print(
+        df.nsmallest(10, "Quantity")[
+            [
+                "InvoiceNo",
+                "StockCode",
+                "Description",
+                "Quantity",
+                "InvoiceDate",
+                "UnitPrice",
+                "CustomerID",
+                "Country",
+            ]
+        ].to_string(index=False)
+    )
+
+    print("\n" + "-" * 70)
+    print("NEGATIVE QUANTITIES NOT MARKED AS CANCELLATIONS")
+    print("-" * 70)
+
+    invoice_numbers = df["InvoiceNo"].astype(str)
+
+    non_cancelled_negative = df[
+        (df["Quantity"] < 0)
+        & (~invoice_numbers.str.upper().str.startswith("C"))
+    ]
+
+    print(
+        f"\nRows with negative quantity but "
+        f"non-cancellation InvoiceNo: "
+        f"{len(non_cancelled_negative)}"
+    )
+
+    if len(non_cancelled_negative) > 0:
+        print("\nSample:")
+        print(
+            non_cancelled_negative[
+                [
+                    "InvoiceNo",
+                    "StockCode",
+                    "Description",
+                    "Quantity",
+                    "InvoiceDate",
+                    "UnitPrice",
+                    "CustomerID",
+                    "Country",
+                ]
+            ].head(20).to_string(index=False)
+        )
+
 
 # ============================================================
 # Main
@@ -392,6 +504,8 @@ def main() -> None:
     profile_duplicates(df)
 
     profile_cancelled_invoices(df)
+
+    profile_quantity(df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

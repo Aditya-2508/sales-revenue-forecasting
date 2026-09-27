@@ -1466,6 +1466,71 @@ def validate_cleaned_sales(df: pd.DataFrame) -> None:
     else:
         print("FAILED - one or more validation rules were violated.")
 
+def analyze_monthly_sales(df: pd.DataFrame) -> None:
+    """Analyze monthly sales revenue trends."""
+
+    print("\n" + "=" * 70)
+    print("MONTHLY SALES ANALYSIS")
+    print("=" * 70)
+
+    sales_df = df.copy()
+
+    sales_df["InvoiceDate"] = pd.to_datetime(
+        sales_df["InvoiceDate"],
+        errors="coerce",
+    )
+
+    sales_df["YearMonth"] = (
+        sales_df["InvoiceDate"]
+        .dt.to_period("M")
+    )
+
+    monthly_sales = (
+        sales_df
+        .groupby("YearMonth")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+            Customers=("CustomerID", "nunique"),
+        )
+        .reset_index()
+    )
+
+    print("\nMonthly sales:")
+    print(monthly_sales.to_string(index=False))
+
+    print("\nMonthly revenue statistics:")
+    print(
+        monthly_sales["Revenue"].describe().to_string()
+    )
+
+    highest_month = monthly_sales.loc[
+        monthly_sales["Revenue"].idxmax()
+    ]
+
+    lowest_month = monthly_sales.loc[
+        monthly_sales["Revenue"].idxmin()
+    ]
+
+    print("\nHighest revenue month:")
+    print(
+        f"{highest_month['YearMonth']}: "
+        f"{highest_month['Revenue']:.2f}"
+    )
+
+    print("\nLowest revenue month:")
+    print(
+        f"{lowest_month['YearMonth']}: "
+        f"{lowest_month['Revenue']:.2f}"
+    )
+
+    print("\nNote:")
+    print(
+        "December 2011 is incomplete because the dataset ends "
+        "on 2011-12-09."
+    )
+
 
 
 # ============================================================
@@ -1522,6 +1587,8 @@ def main() -> None:
     save_cleaned_sales(cleaned_df)
 
     validate_cleaned_sales(cleaned_df)
+
+    analyze_monthly_sales(cleaned_df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

@@ -4163,6 +4163,23 @@ def evaluate_xgboost_forecast(
     )
 
     print("\nXGBoost evaluation complete.")
+def analyze_xgboost_feature_importance(model, feature_columns):
+    """Analyze feature importance from the trained XGBoost model."""
+
+    importance_df = pd.DataFrame(
+        {
+            "Feature": feature_columns,
+            "Importance": model.feature_importances_,
+        }
+    ).sort_values("Importance", ascending=False)
+
+    print("\n=== XGBOOST FEATURE IMPORTANCE ===")
+    print(importance_df.to_string(index=False))
+
+    print("\nTotal importance:", importance_df["Importance"].sum())
+
+    return importance_df
+
 
 # ============================================================
 # Main
@@ -4295,7 +4312,23 @@ def main() -> None:
         test_df,
         test_predictions,
     )
-    
+
+    analyze_xgboost_feature_importance(
+    model,
+    [
+        "DayOfWeek",
+        "DayOfMonth",
+        "Month",
+        "WeekOfYear",
+        "IsWeekend",
+        "Lag1",
+        "Lag7",
+        "Lag14",
+        "Lag28",
+        "RollingMean7",
+        "RollingMean28",
+    ],
+)
     
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

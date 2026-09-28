@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+import numpy as np
 
 
 # ============================================================
@@ -3793,6 +3794,68 @@ def create_forecasting_split(
 
     return train_df, test_df
 
+def evaluate_naive_forecasts(
+    daily_df: pd.DataFrame,
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+) -> None:
+    """Evaluate simple forecasting baselines on the test period."""
+
+    actual = test_df["Revenue"].to_numpy()
+
+    # Baseline 1: training-set mean.
+    mean_prediction = np.full(
+        shape=len(test_df),
+        fill_value=train_df["Revenue"].mean(),
+    )
+
+    # Baseline 2: last observed training value.
+    last_value_prediction = np.full(
+        shape=len(test_df),
+        fill_value=train_df["Revenue"].iloc[-1],
+    )
+
+    # Baseline 3: seasonal naive using the same weekday from 7 days earlier.
+    daily_series = daily_df.set_index("Date")["Revenue"]
+
+    seasonal_prediction = daily_series.shift(7).loc[
+        test_df["Date"]
+    ].to_numpy()
+
+    predictions = {
+        "Training Mean": mean_prediction,
+        "Last Observed Value": last_value_prediction,
+        "Seasonal Naive (7-day)": seasonal_prediction,
+    }
+
+    print("\n=== NAIVE FORECAST BASELINES ===")
+
+    print(f"Test observations: {len(actual)}")
+
+    for name, prediction in predictions.items():
+        if np.isnan(prediction).any():
+            raise ValueError(
+                f"{name} contains missing predictions."
+            )
+
+        errors = actual - prediction
+
+        mae = np.mean(np.abs(errors))
+        rmse = np.sqrt(np.mean(errors**2))
+
+        actual_total = np.sum(np.abs(actual))
+
+        if actual_total == 0:
+            wape = np.nan
+        else:
+            wape = np.sum(np.abs(errors)) / actual_total
+
+        print(f"\n{name}:")
+        print(f"MAE: {mae:.2f}")
+        print(f"RMSE: {rmse:.2f}")
+        print(f"WAPE: {wape:.4f}")
+
+    print("\nBaseline evaluation complete.")
 
 # ============================================================
 # Main
@@ -3893,7 +3956,15 @@ def main() -> None:
 
     daily_df = prepare_daily_revenue_series(cleaned_df)
 
-    create_forecasting_split(daily_df)
+    # create_forecasting_split(daily_df)
+
+    train_df, test_df = create_forecasting_split(daily_df)
+
+    evaluate_naive_forecasts(
+        daily_df,
+        train_df,
+        test_df,
+    )
     
     
     print("\n" + "=" * 70)

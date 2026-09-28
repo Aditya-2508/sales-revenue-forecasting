@@ -2873,6 +2873,95 @@ def analyze_product_demand_revenue_relationship(df: pd.DataFrame) -> None:
         .to_string(index=False)
     )
 
+def analyze_customer_frequency_revenue_relationship(
+    df: pd.DataFrame,
+) -> None:
+    """Analyze the relationship between customer purchase frequency and revenue."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER PURCHASE FREQUENCY VS REVENUE RELATIONSHIP")
+    print("=" * 70)
+
+    customer_summary = (
+        df.groupby("CustomerID")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsPurchased=("Quantity", "sum"),
+        )
+        .reset_index()
+    )
+
+    customer_summary["AverageRevenuePerTransaction"] = (
+        customer_summary["Revenue"]
+        / customer_summary["Transactions"]
+    )
+
+    customer_summary["RevenuePerUnit"] = (
+        customer_summary["Revenue"]
+        / customer_summary["UnitsPurchased"]
+    )
+
+    frequency_revenue_correlation = customer_summary[
+        ["Transactions", "Revenue"]
+    ].corr().loc["Transactions", "Revenue"]
+
+    frequency_units_correlation = customer_summary[
+        ["Transactions", "UnitsPurchased"]
+    ].corr().loc["Transactions", "UnitsPurchased"]
+
+    print("\nCustomer count:")
+    print(len(customer_summary))
+
+    print("\nCorrelation between transactions and revenue:")
+    print(f"{frequency_revenue_correlation:.6f}")
+
+    print("\nCorrelation between transactions and units purchased:")
+    print(f"{frequency_units_correlation:.6f}")
+
+    print("\nTop 10 customers by transaction count:")
+
+    print(
+        customer_summary
+        .sort_values("Transactions", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 customers by revenue:")
+
+    print(
+        customer_summary
+        .sort_values("Revenue", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 customers by average revenue per transaction:")
+
+    print(
+        customer_summary
+        .sort_values(
+            "AverageRevenuePerTransaction",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 customers by revenue per unit:")
+
+    print(
+        customer_summary
+        .sort_values(
+            "RevenuePerUnit",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -2952,7 +3041,9 @@ def main() -> None:
 
     # analyze_product_demand_concentration(cleaned_df)
 
-    analyze_product_demand_revenue_relationship(cleaned_df)
+    # analyze_product_demand_revenue_relationship(cleaned_df)
+
+    analyze_customer_frequency_revenue_relationship(cleaned_df)
     
     
     print("\n" + "=" * 70)

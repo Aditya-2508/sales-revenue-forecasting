@@ -3066,6 +3066,105 @@ def analyze_customer_revenue_segments(df: pd.DataFrame) -> None:
 
     print(comparison.to_string(index=False))
 
+def analyze_customer_frequency_segments(df: pd.DataFrame) -> None:
+    """Analyze customer revenue across purchase-frequency segments."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER PURCHASE FREQUENCY SEGMENTATION")
+    print("=" * 70)
+
+    customer_summary = (
+        df.groupby("CustomerID")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsPurchased=("Quantity", "sum"),
+        )
+        .reset_index()
+    )
+
+    total_revenue = customer_summary["Revenue"].sum()
+
+    def assign_frequency_segment(transactions: int) -> str:
+        if transactions == 1:
+            return "1 transaction"
+        if transactions <= 3:
+            return "2-3 transactions"
+        if transactions <= 5:
+            return "4-5 transactions"
+        if transactions <= 10:
+            return "6-10 transactions"
+        if transactions <= 20:
+            return "11-20 transactions"
+        return "21+ transactions"
+
+    customer_summary["FrequencySegment"] = (
+        customer_summary["Transactions"]
+        .apply(assign_frequency_segment)
+    )
+
+    segment_order = [
+        "1 transaction",
+        "2-3 transactions",
+        "4-5 transactions",
+        "6-10 transactions",
+        "11-20 transactions",
+        "21+ transactions",
+    ]
+
+    segment_summary = (
+        customer_summary
+        .groupby("FrequencySegment", observed=False)
+        .agg(
+            Customers=("CustomerID", "count"),
+            Revenue=("Revenue", "sum"),
+            Transactions=("Transactions", "sum"),
+            UnitsPurchased=("UnitsPurchased", "sum"),
+        )
+        .reindex(segment_order)
+        .reset_index()
+    )
+
+    segment_summary["CustomerShare"] = (
+        segment_summary["Customers"]
+        / len(customer_summary)
+    )
+
+    segment_summary["RevenueShare"] = (
+        segment_summary["Revenue"]
+        / total_revenue
+    )
+
+    segment_summary["RevenuePerCustomer"] = (
+        segment_summary["Revenue"]
+        / segment_summary["Customers"]
+    )
+
+    segment_summary["AverageRevenuePerTransaction"] = (
+        segment_summary["Revenue"]
+        / segment_summary["Transactions"]
+    )
+
+    print("\nCustomer frequency segments:")
+
+    print(
+        segment_summary.to_string(index=False)
+    )
+
+    print("\nRevenue share by frequency segment:")
+
+    print(
+        segment_summary[
+            [
+                "FrequencySegment",
+                "Customers",
+                "CustomerShare",
+                "Revenue",
+                "RevenueShare",
+                "RevenuePerCustomer",
+            ]
+        ].to_string(index=False)
+    )
 
 # ============================================================
 # Main
@@ -3150,7 +3249,9 @@ def main() -> None:
 
     # analyze_customer_frequency_revenue_relationship(cleaned_df)
 
-    analyze_customer_revenue_segments(cleaned_df)
+    # analyze_customer_revenue_segments(cleaned_df)
+
+    analyze_customer_frequency_segments(cleaned_df)
     
     
     print("\n" + "=" * 70)

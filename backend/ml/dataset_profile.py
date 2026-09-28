@@ -2637,6 +2637,148 @@ def analyze_product_demand(df: pd.DataFrame) -> None:
         .to_string(index=False)
     )
 
+def analyze_product_demand_concentration(df: pd.DataFrame) -> None:
+    """Analyze concentration of product demand and revenue."""
+
+    print("\n" + "=" * 70)
+    print("PRODUCT DEMAND CONCENTRATION AND PARETO ANALYSIS")
+    print("=" * 70)
+
+    product_summary = (
+        df.groupby(
+            ["StockCode", "Description"],
+            dropna=False,
+        )
+        .agg(
+            UnitsSold=("Quantity", "sum"),
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+        )
+        .reset_index()
+    )
+
+    total_products = len(product_summary)
+    total_units = product_summary["UnitsSold"].sum()
+    total_revenue = product_summary["Revenue"].sum()
+
+    print("\nTotal products:")
+    print(total_products)
+
+    print("\nTotal units sold:")
+    print(total_units)
+
+    print("\nTotal revenue:")
+    print(f"{total_revenue:.2f}")
+
+    # Unit concentration
+    units_ranked = product_summary.sort_values(
+        "UnitsSold",
+        ascending=False,
+    ).reset_index(drop=True)
+
+    units_ranked["CumulativeUnits"] = (
+        units_ranked["UnitsSold"].cumsum()
+    )
+
+    units_ranked["CumulativeUnitShare"] = (
+        units_ranked["CumulativeUnits"]
+        / total_units
+    )
+
+    # Revenue concentration
+    revenue_ranked = product_summary.sort_values(
+        "Revenue",
+        ascending=False,
+    ).reset_index(drop=True)
+
+    revenue_ranked["CumulativeRevenue"] = (
+        revenue_ranked["Revenue"].cumsum()
+    )
+
+    revenue_ranked["CumulativeRevenueShare"] = (
+        revenue_ranked["CumulativeRevenue"]
+        / total_revenue
+    )
+
+    def products_required_for_share(
+        ranked_df: pd.DataFrame,
+        share_column: str,
+        target_share: float,
+    ) -> int:
+        """Return number of products required to reach a target share."""
+
+        matching_indices = ranked_df.index[
+            ranked_df[share_column] >= target_share
+        ]
+
+        if len(matching_indices) == 0:
+            return len(ranked_df)
+
+        return int(matching_indices[0] + 1)
+
+    print("\nProducts required to reach unit-volume thresholds:")
+
+    for target in [0.50, 0.80, 0.90]:
+        count = products_required_for_share(
+            units_ranked,
+            "CumulativeUnitShare",
+            target,
+        )
+
+        percentage = count / total_products
+
+        print(
+            f"{target:.0%} of units: "
+            f"{count} products "
+            f"({percentage:.2%} of products)"
+        )
+
+    print("\nProducts required to reach revenue thresholds:")
+
+    for target in [0.50, 0.80, 0.90]:
+        count = products_required_for_share(
+            revenue_ranked,
+            "CumulativeRevenueShare",
+            target,
+        )
+
+        percentage = count / total_products
+
+        print(
+            f"{target:.0%} of revenue: "
+            f"{count} products "
+            f"({percentage:.2%} of products)"
+        )
+
+    print("\nTop 20 products by cumulative unit share:")
+
+    print(
+        units_ranked[
+            [
+                "StockCode",
+                "Description",
+                "UnitsSold",
+                "CumulativeUnitShare",
+            ]
+        ]
+        .head(20)
+        .to_string(index=False)
+    )
+
+    print("\nTop 20 products by cumulative revenue share:")
+
+    print(
+        revenue_ranked[
+            [
+                "StockCode",
+                "Description",
+                "Revenue",
+                "CumulativeRevenueShare",
+            ]
+        ]
+        .head(20)
+        .to_string(index=False)
+    )
 
 
 # ============================================================
@@ -2714,7 +2856,9 @@ def main() -> None:
 
     # analyze_customer_recency_and_value(cleaned_df)
 
-    analyze_product_demand(cleaned_df)
+    # analyze_product_demand(cleaned_df)
+
+    analyze_product_demand_concentration(cleaned_df)
     
     
     print("\n" + "=" * 70)

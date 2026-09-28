@@ -4287,7 +4287,96 @@ def evaluate_validation_baselines(
         validation_df,
     )
 
-    
+def run_xgboost_validation_experiments(
+    train_df,
+    validation_df,
+    feature_columns,
+):
+    """Compare a small set of XGBoost configurations on validation data."""
+
+    from xgboost import XGBRegressor
+
+    configurations = [
+        {
+            "name": "baseline",
+            "n_estimators": 300,
+            "learning_rate": 0.05,
+            "max_depth": 6,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+        },
+        {
+            "name": "shallower",
+            "n_estimators": 300,
+            "learning_rate": 0.05,
+            "max_depth": 4,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+        },
+        {
+            "name": "lower_learning_rate",
+            "n_estimators": 500,
+            "learning_rate": 0.03,
+            "max_depth": 6,
+            "subsample": 0.8,
+            "colsample_bytree": 0.8,
+        },
+    ]
+
+    results = []
+
+    X_train = train_df[feature_columns]
+    y_train = train_df["Revenue"]
+
+    X_validation = validation_df[feature_columns]
+    y_validation = validation_df["Revenue"]
+
+    for config in configurations:
+        model = XGBRegressor(
+            objective="reg:squarederror",
+            n_estimators=config["n_estimators"],
+            learning_rate=config["learning_rate"],
+            max_depth=config["max_depth"],
+            subsample=config["subsample"],
+            colsample_bytree=config["colsample_bytree"],
+            random_state=42,
+            n_jobs=-1,
+        )
+
+        model.fit(X_train, y_train)
+
+        predictions = model.predict(X_validation)
+
+        errors = y_validation.to_numpy() - predictions
+
+        mae = np.mean(np.abs(errors))
+        rmse = np.sqrt(np.mean(errors ** 2))
+
+        actual_sum = np.sum(np.abs(y_validation.to_numpy()))
+
+        if actual_sum == 0:
+            wape = np.nan
+        else:
+            wape = np.sum(np.abs(errors)) / actual_sum
+
+        results.append(
+            {
+                "Configuration": config["name"],
+                "MAE": mae,
+                "RMSE": rmse,
+                "WAPE": wape,
+                "NegativePredictions": int(np.sum(predictions < 0)),
+            }
+        )
+
+    results_df = pd.DataFrame(results)
+
+    print("\n=== XGBOOST VALIDATION EXPERIMENTS ===")
+    print(results_df.to_string(index=False))
+
+    return results_df
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -4410,6 +4499,11 @@ def main() -> None:
         daily_df,
         validation_train_df,
         validation_df,
+    )
+    run_xgboost_validation_experiments(
+        validation_train_df,
+        validation_df,
+        feature_columns,
     )
     validation_model, validation_train_predictions, validation_predictions = (
         evaluate_xgboost_validation(

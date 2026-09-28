@@ -3399,6 +3399,130 @@ def analyze_customer_cohorts(df: pd.DataFrame) -> None:
         .to_string(index=False)
     )
 
+def analyze_customer_cohort_retention(df: pd.DataFrame) -> None:
+    """Analyze customer retention by months since first purchase."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER COHORT RETENTION ANALYSIS")
+    print("=" * 70)
+
+    customer_first_purchase = (
+        df.groupby("CustomerID")["InvoiceDate"]
+        .min()
+        .reset_index(name="FirstPurchaseDate")
+    )
+
+    customer_first_purchase["CohortMonth"] = (
+        customer_first_purchase["FirstPurchaseDate"]
+        .dt.to_period("M")
+    )
+
+    transaction_months = (
+        df[["CustomerID", "InvoiceDate"]]
+        .copy()
+    )
+
+    transaction_months["PurchaseMonth"] = (
+        transaction_months["InvoiceDate"]
+        .dt.to_period("M")
+    )
+
+    transaction_months = transaction_months.merge(
+        customer_first_purchase[
+            ["CustomerID", "CohortMonth"]
+        ],
+        on="CustomerID",
+        how="left",
+    )
+
+    transaction_months["MonthOffset"] = (
+        (
+            transaction_months["PurchaseMonth"].dt.year
+            - transaction_months["CohortMonth"].dt.year
+        ) * 12
+        + (
+            transaction_months["PurchaseMonth"].dt.month
+            - transaction_months["CohortMonth"].dt.month
+        )
+    )
+
+    customer_month_activity = (
+        transaction_months[
+            ["CustomerID", "CohortMonth", "MonthOffset"]
+        ]
+        .drop_duplicates()
+    )
+
+    cohort_sizes = (
+        customer_first_purchase
+        .groupby("CohortMonth")
+        .size()
+        .rename("CohortCustomers")
+    )
+
+    retention = (
+        customer_month_activity
+        .groupby(
+            ["CohortMonth", "MonthOffset"]
+        )
+        .size()
+        .rename("ActiveCustomers")
+        .reset_index()
+    )
+
+    retention = retention.merge(
+        cohort_sizes.reset_index(),
+        on="CohortMonth",
+        how="left",
+    )
+
+    retention["RetentionRate"] = (
+        retention["ActiveCustomers"]
+        / retention["CohortCustomers"]
+    )
+
+    print("\nCohort retention records:")
+
+    print(
+        retention
+        .sort_values(
+            ["CohortMonth", "MonthOffset"]
+        )
+        .to_string(index=False)
+    )
+
+    retention_matrix = (
+        retention
+        .pivot(
+            index="CohortMonth",
+            columns="MonthOffset",
+            values="RetentionRate",
+        )
+        .sort_index()
+    )
+
+    print("\nCohort retention matrix:")
+
+    print(
+        retention_matrix.to_string()
+    )
+
+    print("\nRetention at month 1:")
+
+    month_1 = retention[
+        retention["MonthOffset"] == 1
+    ].copy()
+
+    print(
+        month_1[
+            [
+                "CohortMonth",
+                "CohortCustomers",
+                "ActiveCustomers",
+                "RetentionRate",
+            ]
+        ].to_string(index=False)
+    )
 
 
 # ============================================================
@@ -3490,7 +3614,9 @@ def main() -> None:
 
     # analyze_customer_recency_frequency_segments(cleaned_df)
 
-    analyze_customer_cohorts(cleaned_df)
+    # analyze_customer_cohorts(cleaned_df)
+
+    analyze_customer_cohort_retention(cleaned_df)
     
     
     print("\n" + "=" * 70)

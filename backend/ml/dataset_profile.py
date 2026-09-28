@@ -1643,6 +1643,73 @@ def analyze_daily_sales(df: pd.DataFrame) -> None:
         "and the final month (December 2011) is incomplete."
     )
 
+def analyze_daily_revenue_outliers(df: pd.DataFrame) -> None:
+    """Identify unusually large daily revenue observations."""
+
+    print("\n" + "=" * 70)
+    print("DAILY REVENUE OUTLIER ANALYSIS")
+    print("=" * 70)
+
+    sales_df = df.copy()
+
+    sales_df["InvoiceDate"] = pd.to_datetime(
+        sales_df["InvoiceDate"],
+        errors="coerce",
+    )
+
+    sales_df["Date"] = sales_df["InvoiceDate"].dt.date
+
+    daily_sales = (
+        sales_df
+        .groupby("Date")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+            Customers=("CustomerID", "nunique"),
+        )
+        .reset_index()
+    )
+
+    q1 = daily_sales["Revenue"].quantile(0.25)
+    q3 = daily_sales["Revenue"].quantile(0.75)
+    iqr = q3 - q1
+
+    upper_bound = q3 + (1.5 * iqr)
+
+    outliers = daily_sales[
+        daily_sales["Revenue"] > upper_bound
+    ].copy()
+
+    outliers = outliers.sort_values(
+        "Revenue",
+        ascending=False,
+    )
+
+    print("\nOutlier threshold:")
+    print(f"Q1: {q1:.2f}")
+    print(f"Q3: {q3:.2f}")
+    print(f"IQR: {iqr:.2f}")
+    print(f"Upper bound: {upper_bound:.2f}")
+
+    print("\nNumber of high-revenue outlier days:")
+    print(len(outliers))
+
+    print("\nHigh-revenue outlier days:")
+    if len(outliers) > 0:
+        print(
+            outliers.to_string(index=False)
+        )
+    else:
+        print("No high-revenue outlier days detected.")
+
+    print("\nTop 10 revenue days:")
+    print(
+        daily_sales
+        .sort_values("Revenue", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
 
 
 # ============================================================
@@ -1664,45 +1731,47 @@ def main() -> None:
     for column in df.columns:
         print(f"  - {column}")
 
-    profile_schema(df)
+    # profile_schema(df)
 
-    profile_missing_values(df)
+    # profile_missing_values(df)
 
-    profile_duplicates(df)
+    # profile_duplicates(df)
 
-    profile_cancelled_invoices(df)
+    # profile_cancelled_invoices(df)
 
-    profile_quantity(df)
+    # profile_quantity(df)
 
-    profile_unit_price(df)
+    # profile_unit_price(df)
 
-    profile_dates(df)
+    # profile_dates(df)
 
-    profile_entities(df)
+    # profile_entities(df)
 
-    profile_revenue(df)
+    # profile_revenue(df)
 
-    profile_non_standard_transactions(df)
+    # profile_non_standard_transactions(df)
 
-    profile_invoice_structure(df)
+    # profile_invoice_structure(df)
 
-    profile_customer_activity(df)
+    # profile_customer_activity(df)
 
-    profile_product_activity(df)
+    # profile_product_activity(df)
 
-    profile_country_activity(df)
+    # profile_country_activity(df)
 
-    profile_cleaning_impact(df)
+    # profile_cleaning_impact(df)
 
     cleaned_df = clean_sales_data(df)
 
-    save_cleaned_sales(cleaned_df)
+    # save_cleaned_sales(cleaned_df)
 
-    validate_cleaned_sales(cleaned_df)
+    # validate_cleaned_sales(cleaned_df)
 
-    analyze_monthly_sales(cleaned_df)
+    # analyze_monthly_sales(cleaned_df)
 
-    analyze_daily_sales(cleaned_df)
+    # analyze_daily_sales(cleaned_df)
+
+    analyze_daily_revenue_outliers(cleaned_df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

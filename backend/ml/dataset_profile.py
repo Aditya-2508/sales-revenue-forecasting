@@ -1949,6 +1949,111 @@ def analyze_customer_revenue_concentration(
         .to_string()
     )
 
+def analyze_product_revenue_concentration(
+    df: pd.DataFrame,
+) -> None:
+    """Analyze product revenue concentration."""
+
+    print("\n" + "=" * 70)
+    print("PRODUCT REVENUE CONCENTRATION")
+    print("=" * 70)
+
+    product_revenue = (
+        df
+        .groupby(
+            ["StockCode", "Description"],
+            dropna=False,
+        )
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+        )
+        .reset_index()
+        .sort_values(
+            "Revenue",
+            ascending=False,
+        )
+    )
+
+    total_revenue = product_revenue["Revenue"].sum()
+
+    product_revenue["RevenueShare"] = (
+        product_revenue["Revenue"]
+        / total_revenue
+    )
+
+    product_revenue["CumulativeRevenueShare"] = (
+        product_revenue["RevenueShare"]
+        .cumsum()
+    )
+
+    product_count = len(product_revenue)
+
+    print("\nProduct count:")
+    print(product_count)
+
+    print("\nTotal product revenue:")
+    print(f"{total_revenue:.2f}")
+
+    print("\nTop 10 products by revenue:")
+
+    print(
+        product_revenue
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nRevenue concentration:")
+
+    for percentage in [0.01, 0.05, 0.10, 0.20]:
+
+        count = max(
+            1,
+            int(product_count * percentage),
+        )
+
+        revenue_share = (
+            product_revenue
+            .head(count)["Revenue"]
+            .sum()
+            / total_revenue
+        )
+
+        print(
+            f"Top {percentage:.0%} of products "
+            f"({count} products): "
+            f"{revenue_share:.2%} of revenue"
+        )
+
+    revenue_80_position = (
+        product_revenue[
+            product_revenue["CumulativeRevenueShare"] >= 0.80
+        ]
+        .index[0]
+        + 1
+    )
+
+    revenue_80_percentage = (
+        revenue_80_position / product_count
+    )
+
+    print("\nProducts required to reach 80% of revenue:")
+
+    print(
+        f"{revenue_80_position} products "
+        f"({revenue_80_percentage:.2%} of products)"
+    )
+
+    print("\nProduct revenue statistics:")
+
+    print(
+        product_revenue["Revenue"]
+        .describe()
+        .to_string()
+    )
+
+
 
 
 # ============================================================
@@ -2014,7 +2119,9 @@ def main() -> None:
 
     # investigate_revenue_spikes(cleaned_df)
 
-    analyze_customer_revenue_concentration(cleaned_df)
+    # analyze_customer_revenue_concentration(cleaned_df)
+
+    analyze_product_revenue_concentration(cleaned_df)
     
     
     print("\n" + "=" * 70)

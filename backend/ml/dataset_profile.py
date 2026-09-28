@@ -3166,6 +3166,141 @@ def analyze_customer_frequency_segments(df: pd.DataFrame) -> None:
         ].to_string(index=False)
     )
 
+def analyze_customer_recency_frequency_segments(
+    df: pd.DataFrame,
+) -> None:
+    """Analyze customer segments using recency and purchase frequency."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER RECENCY VS FREQUENCY SEGMENTATION")
+    print("=" * 70)
+
+    analysis_date = df["InvoiceDate"].max()
+
+    customer_summary = (
+        df.groupby("CustomerID")
+        .agg(
+            LastPurchase=("InvoiceDate", "max"),
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsPurchased=("Quantity", "sum"),
+        )
+        .reset_index()
+    )
+
+    customer_summary["RecencyDays"] = (
+        analysis_date - customer_summary["LastPurchase"]
+    ).dt.days
+
+    def assign_recency_segment(recency_days: int) -> str:
+        if recency_days <= 30:
+            return "0-30 days"
+        if recency_days <= 90:
+            return "31-90 days"
+        if recency_days <= 180:
+            return "91-180 days"
+        if recency_days <= 365:
+            return "181-365 days"
+        return "366+ days"
+
+    def assign_frequency_segment(transactions: int) -> str:
+        if transactions == 1:
+            return "1 transaction"
+        if transactions <= 3:
+            return "2-3 transactions"
+        if transactions <= 5:
+            return "4-5 transactions"
+        if transactions <= 10:
+            return "6-10 transactions"
+        if transactions <= 20:
+            return "11-20 transactions"
+        return "21+ transactions"
+
+    customer_summary["RecencySegment"] = (
+        customer_summary["RecencyDays"]
+        .apply(assign_recency_segment)
+    )
+
+    customer_summary["FrequencySegment"] = (
+        customer_summary["Transactions"]
+        .apply(assign_frequency_segment)
+    )
+
+    recency_order = [
+        "0-30 days",
+        "31-90 days",
+        "91-180 days",
+        "181-365 days",
+        "366+ days",
+    ]
+
+    frequency_order = [
+        "1 transaction",
+        "2-3 transactions",
+        "4-5 transactions",
+        "6-10 transactions",
+        "11-20 transactions",
+        "21+ transactions",
+    ]
+
+    segment_summary = (
+        customer_summary
+        .groupby(
+            ["RecencySegment", "FrequencySegment"],
+            observed=False,
+        )
+        .agg(
+            Customers=("CustomerID", "count"),
+            Revenue=("Revenue", "sum"),
+            Transactions=("Transactions", "sum"),
+            UnitsPurchased=("UnitsPurchased", "sum"),
+        )
+        .reset_index()
+    )
+
+    segment_summary["RecencySegment"] = pd.Categorical(
+        segment_summary["RecencySegment"],
+        categories=recency_order,
+        ordered=True,
+    )
+
+    segment_summary["FrequencySegment"] = pd.Categorical(
+        segment_summary["FrequencySegment"],
+        categories=frequency_order,
+        ordered=True,
+    )
+
+    segment_summary = segment_summary.sort_values(
+        ["RecencySegment", "FrequencySegment"]
+    )
+
+    print("\nAnalysis date:")
+    print(analysis_date)
+
+    print("\nCustomer segment matrix:")
+
+    print(
+        segment_summary.to_string(index=False)
+    )
+
+    print("\nCustomer counts by recency segment:")
+
+    print(
+        customer_summary["RecencySegment"]
+        .value_counts()
+        .reindex(recency_order, fill_value=0)
+        .to_string()
+    )
+
+    print("\nCustomer counts by frequency segment:")
+
+    print(
+        customer_summary["FrequencySegment"]
+        .value_counts()
+        .reindex(frequency_order, fill_value=0)
+        .to_string()
+    )
+
 # ============================================================
 # Main
 # ============================================================
@@ -3251,7 +3386,9 @@ def main() -> None:
 
     # analyze_customer_revenue_segments(cleaned_df)
 
-    analyze_customer_frequency_segments(cleaned_df)
+    # analyze_customer_frequency_segments(cleaned_df)
+
+    analyze_customer_recency_frequency_segments(cleaned_df)
     
     
     print("\n" + "=" * 70)

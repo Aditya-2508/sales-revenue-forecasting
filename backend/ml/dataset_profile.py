@@ -3524,6 +3524,104 @@ def analyze_customer_cohort_retention(df: pd.DataFrame) -> None:
         ].to_string(index=False)
     )
 
+def analyze_cohort_monetary_value(df: pd.DataFrame) -> None:
+    """Analyze monetary value across customer acquisition cohorts."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER COHORT MONETARY VALUE ANALYSIS")
+    print("=" * 70)
+
+    customer_first_purchase = (
+        df.groupby("CustomerID")["InvoiceDate"]
+        .min()
+        .reset_index(name="FirstPurchaseDate")
+    )
+
+    customer_first_purchase["CohortMonth"] = (
+        customer_first_purchase["FirstPurchaseDate"]
+        .dt.to_period("M")
+        .astype(str)
+    )
+
+    customer_summary = (
+        df.groupby("CustomerID")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsPurchased=("Quantity", "sum"),
+        )
+        .reset_index()
+    )
+
+    customer_summary = customer_summary.merge(
+        customer_first_purchase[
+            ["CustomerID", "CohortMonth"]
+        ],
+        on="CustomerID",
+        how="left",
+    )
+
+    cohort_summary = (
+        customer_summary
+        .groupby("CohortMonth")
+        .agg(
+            Customers=("CustomerID", "count"),
+            Revenue=("Revenue", "sum"),
+            Transactions=("Transactions", "sum"),
+            UnitsPurchased=("UnitsPurchased", "sum"),
+        )
+        .reset_index()
+    )
+
+    cohort_summary["RevenuePerCustomer"] = (
+        cohort_summary["Revenue"]
+        / cohort_summary["Customers"]
+    )
+
+    cohort_summary["TransactionsPerCustomer"] = (
+        cohort_summary["Transactions"]
+        / cohort_summary["Customers"]
+    )
+
+    cohort_summary["RevenuePerTransaction"] = (
+        cohort_summary["Revenue"]
+        / cohort_summary["Transactions"]
+    )
+
+    cohort_summary["UnitsPerCustomer"] = (
+        cohort_summary["UnitsPurchased"]
+        / cohort_summary["Customers"]
+    )
+
+    print("\nCohort monetary value:")
+
+    print(
+        cohort_summary.to_string(index=False)
+    )
+
+    print("\nHighest revenue per customer cohorts:")
+
+    print(
+        cohort_summary
+        .sort_values(
+            "RevenuePerCustomer",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nHighest revenue per transaction cohorts:")
+
+    print(
+        cohort_summary
+        .sort_values(
+            "RevenuePerTransaction",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
 
 # ============================================================
 # Main
@@ -3616,7 +3714,9 @@ def main() -> None:
 
     # analyze_customer_cohorts(cleaned_df)
 
-    analyze_customer_cohort_retention(cleaned_df)
+    # analyze_customer_cohort_retention(cleaned_df)
+
+    analyze_cohort_monetary_value(cleaned_df)
     
     
     print("\n" + "=" * 70)

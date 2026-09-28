@@ -1531,6 +1531,118 @@ def analyze_monthly_sales(df: pd.DataFrame) -> None:
         "on 2011-12-09."
     )
 
+def analyze_daily_sales(df: pd.DataFrame) -> None:
+    """Analyze daily sales revenue and transaction trends."""
+
+    print("\n" + "=" * 70)
+    print("DAILY SALES ANALYSIS")
+    print("=" * 70)
+
+    sales_df = df.copy()
+
+    sales_df["InvoiceDate"] = pd.to_datetime(
+        sales_df["InvoiceDate"],
+        errors="coerce",
+    )
+
+    sales_df["Date"] = sales_df["InvoiceDate"].dt.date
+
+    daily_sales = (
+        sales_df
+        .groupby("Date")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+            Customers=("CustomerID", "nunique"),
+        )
+        .reset_index()
+    )
+
+    print("\nDaily sales summary:")
+    print(daily_sales.head(10).to_string(index=False))
+
+    print("\nDaily revenue statistics:")
+    print(
+        daily_sales["Revenue"].describe().to_string()
+    )
+
+    highest_day = daily_sales.loc[
+        daily_sales["Revenue"].idxmax()
+    ]
+
+    lowest_day = daily_sales.loc[
+        daily_sales["Revenue"].idxmin()
+    ]
+
+    print("\nHighest revenue day:")
+    print(
+        f"{highest_day['Date']}: "
+        f"{highest_day['Revenue']:.2f}"
+    )
+
+    print("\nLowest revenue day:")
+    print(
+        f"{lowest_day['Date']}: "
+        f"{lowest_day['Revenue']:.2f}"
+    )
+
+    sales_df["DayOfWeek"] = (
+        sales_df["InvoiceDate"]
+        .dt.day_name()
+    )
+
+    weekday_order = [
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday",
+        "Sunday",
+    ]
+
+    weekday_sales = (
+        sales_df
+        .groupby("DayOfWeek")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+        )
+        .reindex(weekday_order)
+        .reset_index()
+    )
+
+    print("\nSales by day of week:")
+    print(
+        weekday_sales.to_string(index=False)
+    )
+
+    print("\nAverage daily revenue by day of week:")
+
+    daily_weekday_sales = (
+        daily_sales.assign(
+            DayOfWeek=pd.to_datetime(
+                daily_sales["Date"]
+            ).dt.day_name()
+        )
+        .groupby("DayOfWeek")["Revenue"]
+        .mean()
+        .reindex(weekday_order)
+    )
+
+    print(
+        daily_weekday_sales
+        .to_string()
+    )
+
+    print("\nNote:")
+    print(
+        "The dataset contains 305 unique transaction dates, "
+        "and the final month (December 2011) is incomplete."
+    )
+
 
 
 # ============================================================
@@ -1589,6 +1701,8 @@ def main() -> None:
     validate_cleaned_sales(cleaned_df)
 
     analyze_monthly_sales(cleaned_df)
+
+    analyze_daily_sales(cleaned_df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

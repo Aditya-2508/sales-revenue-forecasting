@@ -2130,6 +2130,106 @@ def analyze_country_revenue(df: pd.DataFrame) -> None:
             f"{revenue_share:.2%} of revenue"
         )
 
+def analyze_transaction_value(df: pd.DataFrame) -> None:
+    """Analyze invoice-level transaction value and basket size."""
+
+    print("\n" + "=" * 70)
+    print("TRANSACTION VALUE AND BASKET SIZE ANALYSIS")
+    print("=" * 70)
+
+    invoice_sales = (
+        df
+        .groupby("InvoiceNo")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            UnitsSold=("Quantity", "sum"),
+            Products=("StockCode", "nunique"),
+            CustomerID=("CustomerID", "first"),
+            Country=("Country", "first"),
+        )
+        .reset_index()
+    )
+
+    invoice_sales["RevenuePerProduct"] = (
+        invoice_sales["Revenue"]
+        / invoice_sales["Products"]
+    )
+
+    print("\nInvoice count:")
+    print(len(invoice_sales))
+
+    print("\nInvoice-level revenue statistics:")
+    print(
+        invoice_sales["Revenue"]
+        .describe()
+        .to_string()
+    )
+
+    print("\nUnits per invoice statistics:")
+    print(
+        invoice_sales["UnitsSold"]
+        .describe()
+        .to_string()
+    )
+
+    print("\nProducts per invoice statistics:")
+    print(
+        invoice_sales["Products"]
+        .describe()
+        .to_string()
+    )
+
+    print("\nTop 10 invoices by revenue:")
+
+    print(
+        invoice_sales
+        .sort_values(
+            "Revenue",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 invoices by units sold:")
+
+    print(
+        invoice_sales
+        .sort_values(
+            "UnitsSold",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 invoices by product count:")
+
+    print(
+        invoice_sales
+        .sort_values(
+            "Products",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nInvoices with revenue above 10,000:")
+
+    high_value_count = (
+        invoice_sales["Revenue"] > 10000
+    ).sum()
+
+    print(high_value_count)
+
+    print("\nInvoices with revenue above 5,000:")
+
+    medium_high_value_count = (
+        invoice_sales["Revenue"] > 5000
+    ).sum()
+
+    print(medium_high_value_count)
 
 
 
@@ -2200,7 +2300,9 @@ def main() -> None:
 
     # analyze_product_revenue_concentration(cleaned_df)
 
-    analyze_country_revenue(cleaned_df)
+    # analyze_country_revenue(cleaned_df)
+
+    analyze_transaction_value(cleaned_df)
     
     
     print("\n" + "=" * 70)

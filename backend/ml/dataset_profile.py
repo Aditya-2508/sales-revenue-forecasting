@@ -4093,6 +4093,76 @@ def train_xgboost_forecaster(
 
     return model, train_predictions, test_predictions
 
+def evaluate_xgboost_forecast(
+    test_df: pd.DataFrame,
+    test_predictions: np.ndarray,
+) -> None:
+    """Evaluate XGBoost predictions on the chronological test period."""
+
+    actual = test_df["Revenue"].to_numpy()
+
+    if len(actual) != len(test_predictions):
+        raise ValueError(
+            "Actual and prediction lengths do not match."
+        )
+
+    errors = actual - test_predictions
+
+    mae = np.mean(np.abs(errors))
+    rmse = np.sqrt(np.mean(errors**2))
+
+    actual_total = np.sum(np.abs(actual))
+
+    if actual_total == 0:
+        wape = np.nan
+    else:
+        wape = np.sum(np.abs(errors)) / actual_total
+
+    negative_prediction_count = np.sum(
+        test_predictions < 0
+    )
+
+    print("\n=== XGBOOST EVALUATION ===")
+
+    print(f"Test observations: {len(actual)}")
+    print(f"MAE: {mae:.2f}")
+    print(f"RMSE: {rmse:.2f}")
+    print(f"WAPE: {wape:.4f}")
+
+    print("\nPrediction diagnostics:")
+    print(
+        f"Negative predictions: "
+        f"{negative_prediction_count}"
+    )
+    print(
+        f"Minimum prediction: "
+        f"{test_predictions.min():.2f}"
+    )
+    print(
+        f"Maximum prediction: "
+        f"{test_predictions.max():.2f}"
+    )
+
+    print("\nLargest absolute errors:")
+
+    evaluation_df = test_df[
+        ["Date", "Revenue"]
+    ].copy()
+
+    evaluation_df["Prediction"] = test_predictions
+    evaluation_df["AbsoluteError"] = np.abs(errors)
+
+    print(
+        evaluation_df
+        .sort_values(
+            "AbsoluteError",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nXGBoost evaluation complete.")
 
 # ============================================================
 # Main
@@ -4213,10 +4283,17 @@ def main() -> None:
         model_df
     )
 
-    train_xgboost_forecaster(
-        train_df,
+    model, train_predictions, test_predictions = (
+        train_xgboost_forecaster(
+            train_df,
+            test_df,
+            feature_columns,
+        )
+    )
+
+    evaluate_xgboost_forecast(
         test_df,
-        feature_columns,
+        test_predictions,
     )
     
     

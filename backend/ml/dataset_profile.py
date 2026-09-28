@@ -3979,6 +3979,66 @@ def prepare_model_dataset(
 
     return model_df, feature_columns
 
+def split_model_dataset(
+    model_df: pd.DataFrame,
+    train_end_date: str = "2011-09-25",
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Split the model-ready dataset using a fixed chronological boundary."""
+
+    split_date = pd.Timestamp(train_end_date)
+
+    train_df = model_df.loc[
+        model_df["Date"] <= split_date
+    ].copy()
+
+    test_df = model_df.loc[
+        model_df["Date"] > split_date
+    ].copy()
+
+    if train_df.empty:
+        raise ValueError("Training dataset is empty.")
+
+    if test_df.empty:
+        raise ValueError("Test dataset is empty.")
+
+    if train_df["Date"].max() >= test_df["Date"].min():
+        raise ValueError("Training and test periods overlap.")
+
+    if not train_df["Date"].is_monotonic_increasing:
+        raise ValueError("Training data is not chronological.")
+
+    if not test_df["Date"].is_monotonic_increasing:
+        raise ValueError("Test data is not chronological.")
+
+    print("\n=== MODEL DATASET SPLIT ===")
+
+    print(f"Total rows: {len(model_df)}")
+    print(f"Training rows: {len(train_df)}")
+    print(f"Test rows: {len(test_df)}")
+
+    print("\nTraining period:")
+    print(f"Start: {train_df['Date'].min().date()}")
+    print(f"End: {train_df['Date'].max().date()}")
+
+    print("\nTest period:")
+    print(f"Start: {test_df['Date'].min().date()}")
+    print(f"End: {test_df['Date'].max().date()}")
+
+    print("\nSplit validation:")
+    print(
+        "Training dates sorted:",
+        train_df["Date"].is_monotonic_increasing,
+    )
+    print(
+        "Test dates sorted:",
+        test_df["Date"].is_monotonic_increasing,
+    )
+    print(
+        "No temporal overlap:",
+        train_df["Date"].max() < test_df["Date"].min(),
+    )
+
+    return train_df, test_df
 
 # ============================================================
 # Main
@@ -4091,7 +4151,11 @@ def main() -> None:
 
     feature_df = create_forecasting_features(daily_df)
 
-    prepare_model_dataset(feature_df)
+    model_df, feature_columns = prepare_model_dataset(
+        feature_df
+    )
+
+    split_model_dataset(model_df)
     
     
     print("\n" + "=" * 70)

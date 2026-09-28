@@ -4180,6 +4180,31 @@ def analyze_xgboost_feature_importance(model, feature_columns):
 
     return importance_df
 
+def analyze_negative_predictions(test_df, test_predictions):
+    """Inspect negative predictions produced by the forecasting model."""
+
+    negative_mask = test_predictions < 0
+
+    negative_df = test_df.loc[
+        negative_mask,
+        ["Date", "Revenue"],
+    ].copy()
+
+    negative_df["Prediction"] = test_predictions[negative_mask]
+    negative_df["Error"] = (
+        negative_df["Revenue"] - negative_df["Prediction"]
+    )
+
+    print("\n=== NEGATIVE PREDICTION ANALYSIS ===")
+    print("Negative predictions:", negative_mask.sum())
+
+    if negative_df.empty:
+        print("No negative predictions found.")
+    else:
+        print(negative_df.to_string(index=False))
+
+    return negative_df
+
 
 # ============================================================
 # Main
@@ -4328,6 +4353,10 @@ def main() -> None:
         "RollingMean7",
         "RollingMean28",
     ],
+)
+    analyze_negative_predictions(
+    test_df,
+    test_predictions,
 )
     
     print("\n" + "=" * 70)

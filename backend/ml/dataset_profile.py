@@ -3750,6 +3750,50 @@ def prepare_daily_revenue_series(df: pd.DataFrame) -> pd.DataFrame:
 
     return daily_df
 
+
+def create_forecasting_split(
+    daily_df: pd.DataFrame,
+    train_ratio: float = 0.80,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Create a chronological train/test split for forecasting."""
+
+    if not 0 < train_ratio < 1:
+        raise ValueError("train_ratio must be between 0 and 1.")
+
+    daily_df = daily_df.sort_values("Date").reset_index(drop=True)
+
+    split_index = int(len(daily_df) * train_ratio)
+
+    train_df = daily_df.iloc[:split_index].copy()
+    test_df = daily_df.iloc[split_index:].copy()
+
+    print("\n=== FORECASTING TRAIN/TEST SPLIT ===")
+
+    print(f"Total rows: {len(daily_df)}")
+    print(f"Training rows: {len(train_df)}")
+    print(f"Test rows: {len(test_df)}")
+    print(f"Training ratio: {len(train_df) / len(daily_df):.4f}")
+    print(f"Test ratio: {len(test_df) / len(daily_df):.4f}")
+
+    print("\nTraining period:")
+    print(f"Start: {train_df['Date'].min().date()}")
+    print(f"End: {train_df['Date'].max().date()}")
+
+    print("\nTest period:")
+    print(f"Start: {test_df['Date'].min().date()}")
+    print(f"End: {test_df['Date'].max().date()}")
+
+    print("\nSplit validation:")
+    print(f"Training dates sorted: {train_df['Date'].is_monotonic_increasing}")
+    print(f"Test dates sorted: {test_df['Date'].is_monotonic_increasing}")
+    print(
+        "No temporal overlap:",
+        train_df["Date"].max() < test_df["Date"].min(),
+    )
+
+    return train_df, test_df
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -3847,7 +3891,9 @@ def main() -> None:
 
     # analyze_time_series_structure(cleaned_df)
 
-    daily_revenue_df = prepare_daily_revenue_series(cleaned_df)
+    daily_df = prepare_daily_revenue_series(cleaned_df)
+
+    create_forecasting_split(daily_df)
     
     
     print("\n" + "=" * 70)

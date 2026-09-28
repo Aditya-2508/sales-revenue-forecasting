@@ -4205,13 +4205,52 @@ def analyze_negative_predictions(test_df, test_predictions):
 
     return negative_df
 
+def create_model_validation_split(model_df, validation_days=30):
+    """Create chronological train and validation datasets."""
 
+    if validation_days <= 0:
+        raise ValueError("validation_days must be positive.")
+
+    if validation_days >= len(model_df):
+        raise ValueError("validation_days must be smaller than the dataset size.")
+
+    split_index = len(model_df) - validation_days
+
+    train_df = model_df.iloc[:split_index].copy()
+    validation_df = model_df.iloc[split_index:].copy()
+
+    print("\n=== MODEL VALIDATION SPLIT ===")
+    print("Training rows:", len(train_df))
+    print("Validation rows:", len(validation_df))
+
+    print(
+        "Training date range:",
+        train_df["Date"].min(),
+        "to",
+        train_df["Date"].max(),
+    )
+
+    print(
+        "Validation date range:",
+        validation_df["Date"].min(),
+        "to",
+        validation_df["Date"].max(),
+    )
+
+    print(
+        "Chronological:",
+        train_df["Date"].max() < validation_df["Date"].min(),
+    )
+
+    return train_df, validation_df
+
+    
 # ============================================================
 # Main
 # ============================================================
 
 def main() -> None:
-    """Load the dataset and perform initial profiling."""
+    """Load the dataset and run the current forecasting workflow."""
 
     df = load_dataset()
 
@@ -4225,83 +4264,64 @@ def main() -> None:
     for column in df.columns:
         print(f"  - {column}")
 
+    # --------------------------------------------------------
+    # Dataset profiling
+    # --------------------------------------------------------
+
     # profile_schema(df)
-
     # profile_missing_values(df)
-
     # profile_duplicates(df)
-
     # profile_cancelled_invoices(df)
-
     # profile_quantity(df)
-
     # profile_unit_price(df)
-
     # profile_dates(df)
-
     # profile_entities(df)
-
     # profile_revenue(df)
-
     # profile_non_standard_transactions(df)
-
     # profile_invoice_structure(df)
-
     # profile_customer_activity(df)
-
     # profile_product_activity(df)
-
     # profile_country_activity(df)
-
     # profile_cleaning_impact(df)
+
+    # --------------------------------------------------------
+    # Data cleaning
+    # --------------------------------------------------------
 
     cleaned_df = clean_sales_data(df)
 
     # save_cleaned_sales(cleaned_df)
-
     # validate_cleaned_sales(cleaned_df)
 
+    # --------------------------------------------------------
+    # Exploratory data analysis
+    # --------------------------------------------------------
+
     # analyze_monthly_sales(cleaned_df)
-
     # analyze_daily_sales(cleaned_df)
-
     # analyze_daily_revenue_outliers(cleaned_df)
-
     # investigate_revenue_spikes(cleaned_df)
-
     # analyze_customer_revenue_concentration(cleaned_df)
-
     # analyze_product_revenue_concentration(cleaned_df)
-
     # analyze_country_revenue(cleaned_df)
-
     # analyze_transaction_value(cleaned_df)
-
     # analyze_customer_purchase_frequency(cleaned_df)
-
     # analyze_customer_recency_and_value(cleaned_df)
-
     # analyze_product_demand(cleaned_df)
-
     # analyze_product_demand_concentration(cleaned_df)
-
     # analyze_product_demand_revenue_relationship(cleaned_df)
-
     # analyze_customer_frequency_revenue_relationship(cleaned_df)
-
     # analyze_customer_revenue_segments(cleaned_df)
-
     # analyze_customer_frequency_segments(cleaned_df)
-
     # analyze_customer_recency_frequency_segments(cleaned_df)
-
     # analyze_customer_cohorts(cleaned_df)
-
     # analyze_customer_cohort_retention(cleaned_df)
-
     # analyze_cohort_monetary_value(cleaned_df)
-
     # analyze_time_series_structure(cleaned_df)
+
+    # --------------------------------------------------------
+    # Daily forecasting dataset
+    # --------------------------------------------------------
 
     daily_df = prepare_daily_revenue_series(cleaned_df)
 
@@ -4315,15 +4335,38 @@ def main() -> None:
     #     test_df,
     # )
 
+    # --------------------------------------------------------
+    # Forecasting feature engineering
+    # --------------------------------------------------------
+
     feature_df = create_forecasting_features(daily_df)
 
     model_df, feature_columns = prepare_model_dataset(
         feature_df
     )
 
+    # --------------------------------------------------------
+    # Chronological model/test split
+    # --------------------------------------------------------
+
     train_df, test_df = split_model_dataset(
         model_df
     )
+
+    # --------------------------------------------------------
+    # Validation split inside training data
+    # --------------------------------------------------------
+
+    validation_train_df, validation_df = (
+        create_model_validation_split(
+            train_df,
+            validation_days=30,
+        )
+    )
+
+    # --------------------------------------------------------
+    # Initial XGBoost model
+    # --------------------------------------------------------
 
     model, train_predictions, test_predictions = (
         train_xgboost_forecaster(
@@ -4333,32 +4376,49 @@ def main() -> None:
         )
     )
 
+    # --------------------------------------------------------
+    # XGBoost evaluation
+    # --------------------------------------------------------
+
     evaluate_xgboost_forecast(
         test_df,
         test_predictions,
     )
 
+    # --------------------------------------------------------
+    # Feature importance
+    # --------------------------------------------------------
+
     analyze_xgboost_feature_importance(
-    model,
-    [
-        "DayOfWeek",
-        "DayOfMonth",
-        "Month",
-        "WeekOfYear",
-        "IsWeekend",
-        "Lag1",
-        "Lag7",
-        "Lag14",
-        "Lag28",
-        "RollingMean7",
-        "RollingMean28",
-    ],
-)
+        model,
+        [
+            "DayOfWeek",
+            "DayOfMonth",
+            "Month",
+            "WeekOfYear",
+            "IsWeekend",
+            "Lag1",
+            "Lag7",
+            "Lag14",
+            "Lag28",
+            "RollingMean7",
+            "RollingMean28",
+        ],
+    )
+
+    # --------------------------------------------------------
+    # Negative prediction analysis
+    # --------------------------------------------------------
+
     analyze_negative_predictions(
-    test_df,
-    test_predictions,
-)
-    
+        test_df,
+        test_predictions,
+    )
+
+    # --------------------------------------------------------
+    # Final dataset preview
+    # --------------------------------------------------------
+
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")
     print("=" * 70)
@@ -4366,6 +4426,7 @@ def main() -> None:
     print(df.head().to_string(index=False))
 
     print("\nDataset profiling completed successfully.")
+
 
 
 if __name__ == "__main__":

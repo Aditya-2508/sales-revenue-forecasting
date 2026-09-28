@@ -4039,6 +4039,60 @@ def split_model_dataset(
     )
 
     return train_df, test_df
+def train_xgboost_forecaster(
+    train_df: pd.DataFrame,
+    test_df: pd.DataFrame,
+    feature_columns: list[str],
+):
+    """Train a first-pass XGBoost revenue forecasting model."""
+
+    from xgboost import XGBRegressor
+
+    X_train = train_df[feature_columns]
+    y_train = train_df["Revenue"]
+
+    X_test = test_df[feature_columns]
+    y_test = test_df["Revenue"]
+
+    model = XGBRegressor(
+        objective="reg:squarederror",
+        n_estimators=300,
+        learning_rate=0.05,
+        max_depth=6,
+        subsample=0.8,
+        colsample_bytree=0.8,
+        random_state=42,
+        n_jobs=-1,
+    )
+
+    model.fit(
+        X_train,
+        y_train,
+    )
+
+    train_predictions = model.predict(X_train)
+    test_predictions = model.predict(X_test)
+
+    print("\n=== XGBOOST FORECASTER ===")
+
+    print(f"Training rows: {len(X_train)}")
+    print(f"Test rows: {len(X_test)}")
+    print(f"Features: {len(feature_columns)}")
+
+    print("\nTraining prediction summary:")
+    print(
+        pd.Series(train_predictions).describe()
+    )
+
+    print("\nTest prediction summary:")
+    print(
+        pd.Series(test_predictions).describe()
+    )
+
+    print("\nXGBoost training complete.")
+
+    return model, train_predictions, test_predictions
+
 
 # ============================================================
 # Main
@@ -4155,7 +4209,15 @@ def main() -> None:
         feature_df
     )
 
-    split_model_dataset(model_df)
+    train_df, test_df = split_model_dataset(
+        model_df
+    )
+
+    train_xgboost_forecaster(
+        train_df,
+        test_df,
+        feature_columns,
+    )
     
     
     print("\n" + "=" * 70)

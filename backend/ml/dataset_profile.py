@@ -3705,6 +3705,50 @@ def analyze_time_series_structure(df: pd.DataFrame) -> None:
 
     print("\nTime-series analysis complete.")
 
+def prepare_daily_revenue_series(df: pd.DataFrame) -> pd.DataFrame:
+    """Create a complete chronological daily revenue series."""
+
+    daily_revenue = (
+        df.assign(Date=df["InvoiceDate"].dt.normalize())
+        .groupby("Date", as_index=True)["Revenue"]
+        .sum()
+    )
+
+    full_date_index = pd.date_range(
+        start=daily_revenue.index.min(),
+        end=daily_revenue.index.max(),
+        freq="D",
+    )
+
+    daily_revenue = daily_revenue.reindex(
+        full_date_index,
+        fill_value=0,
+    )
+
+    daily_revenue.index.name = "Date"
+
+    daily_df = daily_revenue.reset_index()
+
+    print("\n=== DAILY REVENUE TARGET DATASET ===")
+    print(f"Rows: {len(daily_df)}")
+    print(f"Columns: {list(daily_df.columns)}")
+    print(f"First date: {daily_df['Date'].min().date()}")
+    print(f"Last date: {daily_df['Date'].max().date()}")
+    print(f"Missing dates: {daily_df['Date'].isna().sum()}")
+    print(f"Missing revenue: {daily_df['Revenue'].isna().sum()}")
+    print(f"Duplicate dates: {daily_df['Date'].duplicated().sum()}")
+    print(f"Zero-revenue days: {(daily_df['Revenue'] == 0).sum()}")
+
+    print("\nTarget preview:")
+    print(daily_df.head())
+
+    print("\nTarget tail:")
+    print(daily_df.tail())
+
+    print("\nTarget statistics:")
+    print(daily_df["Revenue"].describe())
+
+    return daily_df
 
 # ============================================================
 # Main
@@ -3801,7 +3845,9 @@ def main() -> None:
 
     # analyze_cohort_monetary_value(cleaned_df)
 
-    analyze_time_series_structure(cleaned_df)
+    # analyze_time_series_structure(cleaned_df)
+
+    daily_revenue_df = prepare_daily_revenue_series(cleaned_df)
     
     
     print("\n" + "=" * 70)

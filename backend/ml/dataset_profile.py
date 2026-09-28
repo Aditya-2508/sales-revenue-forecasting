@@ -2231,6 +2231,136 @@ def analyze_transaction_value(df: pd.DataFrame) -> None:
 
     print(medium_high_value_count)
 
+def analyze_customer_purchase_frequency(
+    df: pd.DataFrame,
+) -> None:
+    """Analyze customer purchase frequency."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER PURCHASE FREQUENCY ANALYSIS")
+    print("=" * 70)
+
+    customer_activity = (
+        df
+        .groupby("CustomerID")
+        .agg(
+            Transactions=("InvoiceNo", "nunique"),
+            Revenue=("Revenue", "sum"),
+            UnitsSold=("Quantity", "sum"),
+            FirstPurchase=("InvoiceDate", "min"),
+            LastPurchase=("InvoiceDate", "max"),
+        )
+        .reset_index()
+    )
+
+    customer_activity["PurchaseSpanDays"] = (
+        pd.to_datetime(
+            customer_activity["LastPurchase"]
+        )
+        - pd.to_datetime(
+            customer_activity["FirstPurchase"]
+        )
+    ).dt.days
+
+    customer_count = len(customer_activity)
+
+    one_time_customers = (
+        customer_activity["Transactions"] == 1
+    ).sum()
+
+    repeat_customers = (
+        customer_activity["Transactions"] > 1
+    ).sum()
+
+    print("\nCustomer count:")
+    print(customer_count)
+
+    print("\nOne-time customers:")
+    print(
+        f"{one_time_customers} "
+        f"({one_time_customers / customer_count:.2%})"
+    )
+
+    print("\nRepeat customers:")
+    print(
+        f"{repeat_customers} "
+        f"({repeat_customers / customer_count:.2%})"
+    )
+
+    print("\nTransactions per customer statistics:")
+    print(
+        customer_activity["Transactions"]
+        .describe()
+        .to_string()
+    )
+
+    print("\nPurchase span in days statistics:")
+    print(
+        customer_activity["PurchaseSpanDays"]
+        .describe()
+        .to_string()
+    )
+
+    print("\nCustomer frequency distribution:")
+
+    frequency_distribution = (
+        customer_activity["Transactions"]
+        .value_counts()
+        .sort_index()
+    )
+
+    print(
+        frequency_distribution
+        .head(20)
+        .to_string()
+    )
+
+    one_time_revenue = customer_activity.loc[
+        customer_activity["Transactions"] == 1,
+        "Revenue",
+    ].sum()
+
+    repeat_customer_revenue = customer_activity.loc[
+        customer_activity["Transactions"] > 1,
+        "Revenue",
+    ].sum()
+
+    total_revenue = customer_activity["Revenue"].sum()
+
+    print("\nRevenue by customer type:")
+
+    print(
+        f"One-time customer revenue: "
+        f"{one_time_revenue:.2f}"
+    )
+
+    print(
+        f"Repeat customer revenue: "
+        f"{repeat_customer_revenue:.2f}"
+    )
+
+    print(
+        f"One-time customer revenue share: "
+        f"{one_time_revenue / total_revenue:.2%}"
+    )
+
+    print(
+        f"Repeat customer revenue share: "
+        f"{repeat_customer_revenue / total_revenue:.2%}"
+    )
+
+    print("\nTop 10 customers by transaction count:")
+
+    print(
+        customer_activity
+        .sort_values(
+            "Transactions",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
 
 
 # ============================================================
@@ -2302,7 +2432,9 @@ def main() -> None:
 
     # analyze_country_revenue(cleaned_df)
 
-    analyze_transaction_value(cleaned_df)
+    # analyze_transaction_value(cleaned_df)
+
+    analyze_customer_purchase_frequency(cleaned_df)
     
     
     print("\n" + "=" * 70)

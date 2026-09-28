@@ -2361,6 +2361,161 @@ def analyze_customer_purchase_frequency(
         .to_string(index=False)
     )
 
+def analyze_customer_recency_and_value(
+    df: pd.DataFrame,
+) -> None:
+    """Analyze customer recency and observed customer value."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER RECENCY AND VALUE ANALYSIS")
+    print("=" * 70)
+
+    sales_df = df.copy()
+
+    sales_df["InvoiceDate"] = pd.to_datetime(
+        sales_df["InvoiceDate"],
+        errors="coerce",
+    )
+
+    analysis_date = sales_df["InvoiceDate"].max()
+
+    customer_value = (
+        sales_df
+        .groupby("CustomerID")
+        .agg(
+            FirstPurchase=("InvoiceDate", "min"),
+            LastPurchase=("InvoiceDate", "max"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+            Revenue=("Revenue", "sum"),
+        )
+        .reset_index()
+    )
+
+    customer_value["RecencyDays"] = (
+        analysis_date
+        - customer_value["LastPurchase"]
+    ).dt.days
+
+    customer_value["ObservedLifespanDays"] = (
+        customer_value["LastPurchase"]
+        - customer_value["FirstPurchase"]
+    ).dt.days
+
+    customer_value["AverageRevenuePerTransaction"] = (
+        customer_value["Revenue"]
+        / customer_value["Transactions"]
+    )
+
+    customer_value["AverageRevenuePerUnit"] = (
+        customer_value["Revenue"]
+        / customer_value["UnitsSold"]
+    )
+
+    active_days = (
+        customer_value["ObservedLifespanDays"]
+        .clip(lower=1)
+    )
+
+    customer_value["RevenuePerObservedDay"] = (
+        customer_value["Revenue"]
+        / active_days
+    )
+
+    print("\nAnalysis date:")
+    print(analysis_date)
+
+    print("\nCustomer value statistics:")
+
+    print(
+        customer_value[
+            [
+                "Revenue",
+                "Transactions",
+                "UnitsSold",
+                "RecencyDays",
+                "ObservedLifespanDays",
+                "AverageRevenuePerTransaction",
+                "AverageRevenuePerUnit",
+                "RevenuePerObservedDay",
+            ]
+        ]
+        .describe()
+        .to_string()
+    )
+
+    print("\nTop 10 customers by observed revenue:")
+
+    print(
+        customer_value
+        .sort_values(
+            "Revenue",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 most recent customers:")
+
+    print(
+        customer_value
+        .sort_values(
+            "RecencyDays",
+            ascending=True,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nCustomers with longest observed lifespan:")
+
+    print(
+        customer_value
+        .sort_values(
+            "ObservedLifespanDays",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nRecency distribution:")
+
+    print(
+        customer_value["RecencyDays"]
+        .describe()
+        .to_string()
+    )
+
+    print("\nCustomers by recency bucket:")
+
+    recency_bins = [
+        -1,
+        30,
+        90,
+        180,
+        365,
+        float("inf"),
+    ]
+
+    recency_labels = [
+        "0-30 days",
+        "31-90 days",
+        "91-180 days",
+        "181-365 days",
+        "366+ days",
+    ]
+
+    recency_distribution = pd.cut(
+        customer_value["RecencyDays"],
+        bins=recency_bins,
+        labels=recency_labels,
+    ).value_counts().sort_index()
+
+    print(
+        recency_distribution.to_string()
+    )
 
 
 # ============================================================
@@ -2434,7 +2589,9 @@ def main() -> None:
 
     # analyze_transaction_value(cleaned_df)
 
-    analyze_customer_purchase_frequency(cleaned_df)
+    # analyze_customer_purchase_frequency(cleaned_df)
+
+    analyze_customer_recency_and_value(cleaned_df)
     
     
     print("\n" + "=" * 70)

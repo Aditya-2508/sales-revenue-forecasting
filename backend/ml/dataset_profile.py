@@ -2053,6 +2053,83 @@ def analyze_product_revenue_concentration(
         .to_string()
     )
 
+def analyze_country_revenue(df: pd.DataFrame) -> None:
+    """Analyze revenue and sales activity by country."""
+
+    print("\n" + "=" * 70)
+    print("COUNTRY REVENUE ANALYSIS")
+    print("=" * 70)
+
+    country_sales = (
+        df
+        .groupby("Country")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Customers=("CustomerID", "nunique"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+        )
+        .reset_index()
+        .sort_values(
+            "Revenue",
+            ascending=False,
+        )
+    )
+
+    total_revenue = country_sales["Revenue"].sum()
+
+    country_sales["RevenueShare"] = (
+        country_sales["Revenue"]
+        / total_revenue
+    )
+
+    country_sales["AverageRevenuePerTransaction"] = (
+        country_sales["Revenue"]
+        / country_sales["Transactions"]
+    )
+
+    print("\nCountry count:")
+    print(len(country_sales))
+
+    print("\nTotal revenue:")
+    print(f"{total_revenue:.2f}")
+
+    print("\nCountry revenue summary:")
+
+    print(
+        country_sales.to_string(index=False)
+    )
+
+    print("\nTop 10 countries by revenue:")
+
+    print(
+        country_sales
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nRevenue concentration by country:")
+
+    for percentage in [0.10, 0.25, 0.50]:
+
+        count = max(
+            1,
+            int(len(country_sales) * percentage),
+        )
+
+        revenue_share = (
+            country_sales
+            .head(count)["Revenue"]
+            .sum()
+            / total_revenue
+        )
+
+        print(
+            f"Top {percentage:.0%} of countries "
+            f"({count} countries): "
+            f"{revenue_share:.2%} of revenue"
+        )
+
 
 
 
@@ -2121,7 +2198,9 @@ def main() -> None:
 
     # analyze_customer_revenue_concentration(cleaned_df)
 
-    analyze_product_revenue_concentration(cleaned_df)
+    # analyze_product_revenue_concentration(cleaned_df)
+
+    analyze_country_revenue(cleaned_df)
     
     
     print("\n" + "=" * 70)

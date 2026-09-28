@@ -2961,6 +2961,111 @@ def analyze_customer_frequency_revenue_relationship(
         .to_string(index=False)
     )
 
+def analyze_customer_revenue_segments(df: pd.DataFrame) -> None:
+    """Analyze customer revenue distribution across percentile segments."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER REVENUE DISTRIBUTION AND SEGMENTATION")
+    print("=" * 70)
+
+    customer_summary = (
+        df.groupby("CustomerID")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsPurchased=("Quantity", "sum"),
+        )
+        .reset_index()
+        .sort_values("Revenue", ascending=False)
+        .reset_index(drop=True)
+    )
+
+    total_customers = len(customer_summary)
+    total_revenue = customer_summary["Revenue"].sum()
+
+    print("\nTotal customers:")
+    print(total_customers)
+
+    print("\nTotal revenue:")
+    print(f"{total_revenue:.2f}")
+
+    segment_definitions = [
+        ("Top 1%", 0.01),
+        ("Top 5%", 0.05),
+        ("Top 10%", 0.10),
+        ("Top 20%", 0.20),
+    ]
+
+    print("\nCustomer revenue segments:")
+
+    for segment_name, proportion in segment_definitions:
+        customer_count = max(
+            1,
+            int(total_customers * proportion),
+        )
+
+        segment = customer_summary.head(customer_count)
+
+        segment_revenue = segment["Revenue"].sum()
+        segment_transactions = segment["Transactions"].sum()
+        segment_units = segment["UnitsPurchased"].sum()
+
+        revenue_share = segment_revenue / total_revenue
+
+        print(f"\n{segment_name}:")
+        print(f"Customers: {customer_count}")
+        print(f"Customer share: {customer_count / total_customers:.2%}")
+        print(f"Revenue: {segment_revenue:.2f}")
+        print(f"Revenue share: {revenue_share:.2%}")
+        print(f"Transactions: {segment_transactions}")
+        print(f"Units purchased: {segment_units}")
+
+    top_20_count = max(
+        1,
+        int(total_customers * 0.20),
+    )
+
+    top_20 = customer_summary.head(top_20_count)
+    remaining = customer_summary.iloc[top_20_count:]
+
+    print("\nTop 20% vs remaining customers:")
+
+    comparison = pd.DataFrame(
+        {
+            "Segment": [
+                "Top 20%",
+                "Remaining 80%",
+            ],
+            "Customers": [
+                len(top_20),
+                len(remaining),
+            ],
+            "Revenue": [
+                top_20["Revenue"].sum(),
+                remaining["Revenue"].sum(),
+            ],
+            "Transactions": [
+                top_20["Transactions"].sum(),
+                remaining["Transactions"].sum(),
+            ],
+            "UnitsPurchased": [
+                top_20["UnitsPurchased"].sum(),
+                remaining["UnitsPurchased"].sum(),
+            ],
+        }
+    )
+
+    comparison["RevenueShare"] = (
+        comparison["Revenue"] / total_revenue
+    )
+
+    comparison["RevenuePerCustomer"] = (
+        comparison["Revenue"]
+        / comparison["Customers"]
+    )
+
+    print(comparison.to_string(index=False))
+
 
 # ============================================================
 # Main
@@ -3043,7 +3148,9 @@ def main() -> None:
 
     # analyze_product_demand_revenue_relationship(cleaned_df)
 
-    analyze_customer_frequency_revenue_relationship(cleaned_df)
+    # analyze_customer_frequency_revenue_relationship(cleaned_df)
+
+    analyze_customer_revenue_segments(cleaned_df)
     
     
     print("\n" + "=" * 70)

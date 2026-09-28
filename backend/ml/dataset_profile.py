@@ -1711,6 +1711,145 @@ def analyze_daily_revenue_outliers(df: pd.DataFrame) -> None:
         .to_string(index=False)
     )
 
+def investigate_revenue_spikes(df: pd.DataFrame) -> None:
+    """Investigate transactions contributing to extreme revenue days."""
+
+    print("\n" + "=" * 70)
+    print("REVENUE SPIKE INVESTIGATION")
+    print("=" * 70)
+
+    sales_df = df.copy()
+
+    sales_df["InvoiceDate"] = pd.to_datetime(
+        sales_df["InvoiceDate"],
+        errors="coerce",
+    )
+
+    sales_df["Date"] = sales_df["InvoiceDate"].dt.date
+
+    daily_revenue = (
+        sales_df
+        .groupby("Date")["Revenue"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    top_spike_dates = daily_revenue.head(3).index
+
+    print("\nTop 3 revenue spike dates:")
+    for date in top_spike_dates:
+        print(
+            f"  - {date}: "
+            f"{daily_revenue.loc[date]:.2f}"
+        )
+
+    for date in top_spike_dates:
+        print("\n" + "-" * 70)
+        print(f"SPIKE DATE: {date}")
+        print("-" * 70)
+
+        day_df = sales_df[
+            sales_df["Date"] == date
+        ].copy()
+
+        print("\nDaily totals:")
+        print(
+            f"Revenue: {day_df['Revenue'].sum():.2f}"
+        )
+        print(
+            f"Transactions: "
+            f"{day_df['InvoiceNo'].nunique()}"
+        )
+        print(
+            f"Units sold: "
+            f"{day_df['Quantity'].sum()}"
+        )
+        print(
+            f"Customers: "
+            f"{day_df['CustomerID'].nunique()}"
+        )
+
+        print("\nTop 10 transaction lines by revenue:")
+
+        top_transactions = (
+            day_df[
+                [
+                    "InvoiceNo",
+                    "StockCode",
+                    "Description",
+                    "Quantity",
+                    "UnitPrice",
+                    "CustomerID",
+                    "Revenue",
+                ]
+            ]
+            .sort_values(
+                "Revenue",
+                ascending=False,
+            )
+            .head(10)
+        )
+
+        print(
+            top_transactions.to_string(
+                index=False
+            )
+        )
+
+        print("\nTop 10 products by revenue:")
+
+        top_products = (
+            day_df
+            .groupby(
+                ["StockCode", "Description"],
+                dropna=False,
+            )
+            .agg(
+                Revenue=("Revenue", "sum"),
+                Quantity=("Quantity", "sum"),
+                Transactions=("InvoiceNo", "nunique"),
+            )
+            .reset_index()
+            .sort_values(
+                "Revenue",
+                ascending=False,
+            )
+            .head(10)
+        )
+
+        print(
+            top_products.to_string(
+                index=False
+            )
+        )
+
+        print("\nTop 10 invoices by revenue:")
+
+        top_invoices = (
+            day_df
+            .groupby("InvoiceNo")
+            .agg(
+                Revenue=("Revenue", "sum"),
+                Quantity=("Quantity", "sum"),
+                Products=("StockCode", "nunique"),
+                CustomerID=("CustomerID", "first"),
+            )
+            .reset_index()
+            .sort_values(
+                "Revenue",
+                ascending=False,
+            )
+            .head(10)
+        )
+
+        print(
+            top_invoices.to_string(
+                index=False
+            )
+        )
+
+
+
 
 # ============================================================
 # Main
@@ -1771,7 +1910,9 @@ def main() -> None:
 
     # analyze_daily_sales(cleaned_df)
 
-    analyze_daily_revenue_outliers(cleaned_df)
+    # analyze_daily_revenue_outliers(cleaned_df)
+
+    investigate_revenue_spikes(cleaned_df)
 
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")

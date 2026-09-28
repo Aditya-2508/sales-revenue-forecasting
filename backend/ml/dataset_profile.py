@@ -4244,6 +4244,34 @@ def create_model_validation_split(model_df, validation_days=30):
 
     return train_df, validation_df
 
+def evaluate_xgboost_validation(
+    train_df,
+    validation_df,
+    feature_columns,
+):
+    """Train XGBoost on the training subset and evaluate validation data."""
+
+    model, train_predictions, validation_predictions = (
+        train_xgboost_forecaster(
+            train_df,
+            validation_df,
+            feature_columns,
+        )
+    )
+
+    print("\n=== XGBOOST VALIDATION EVALUATION ===")
+
+    evaluate_xgboost_forecast(
+        validation_df,
+        validation_predictions,
+    )
+
+    return (
+        model,
+        train_predictions,
+        validation_predictions,
+    )
+
     
 # ============================================================
 # Main
@@ -4363,7 +4391,13 @@ def main() -> None:
             validation_days=30,
         )
     )
-
+    validation_model, validation_train_predictions, validation_predictions = (
+        evaluate_xgboost_validation(
+            validation_train_df,
+            validation_df,
+            feature_columns,
+        )
+    )
     # --------------------------------------------------------
     # Initial XGBoost model
     # --------------------------------------------------------

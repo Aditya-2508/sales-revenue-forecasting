@@ -3901,6 +3901,84 @@ def create_forecasting_features(
 
     return feature_df
 
+def prepare_model_dataset(
+    feature_df: pd.DataFrame,
+) -> tuple[pd.DataFrame, list[str]]:
+    """Prepare the leakage-safe feature dataset for forecasting models."""
+
+    feature_columns = [
+        "DayOfWeek",
+        "DayOfMonth",
+        "Month",
+        "WeekOfYear",
+        "IsWeekend",
+        "Lag1",
+        "Lag7",
+        "Lag14",
+        "Lag28",
+        "RollingMean7",
+        "RollingMean28",
+    ]
+
+    required_columns = [
+        "Date",
+        "Revenue",
+        *feature_columns,
+    ]
+
+    missing_columns = [
+        column
+        for column in required_columns
+        if column not in feature_df.columns
+    ]
+
+    if missing_columns:
+        raise ValueError(
+            f"Missing required columns: {missing_columns}"
+        )
+
+    model_df = feature_df[
+        required_columns
+    ].copy()
+
+    initial_rows = len(model_df)
+
+    model_df = model_df.dropna(
+        subset=feature_columns
+    ).reset_index(drop=True)
+
+    removed_rows = initial_rows - len(model_df)
+
+    print("\n=== MODEL-READY DATASET ===")
+
+    print(f"Initial rows: {initial_rows}")
+    print(f"Rows removed for feature warm-up: {removed_rows}")
+    print(f"Final rows: {len(model_df)}")
+
+    print(f"\nFeature columns ({len(feature_columns)}):")
+    print(feature_columns)
+
+    print("\nMissing values:")
+    print(model_df.isna().sum())
+
+    print("\nDuplicate dates:")
+    print(model_df["Date"].duplicated().sum())
+
+    print("\nChronological order:")
+    print(model_df["Date"].is_monotonic_increasing)
+
+    print("\nModel-ready date range:")
+    print(f"Start: {model_df['Date'].min().date()}")
+    print(f"End: {model_df['Date'].max().date()}")
+
+    print("\nModel-ready preview:")
+    print(model_df.head())
+
+    print("\nModel-ready tail:")
+    print(model_df.tail())
+
+    return model_df, feature_columns
+
 
 # ============================================================
 # Main
@@ -4011,7 +4089,9 @@ def main() -> None:
     #     test_df,
     # )
 
-    create_forecasting_features(daily_df)
+    feature_df = create_forecasting_features(daily_df)
+
+    prepare_model_dataset(feature_df)
     
     
     print("\n" + "=" * 70)

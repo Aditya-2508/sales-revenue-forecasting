@@ -3301,6 +3301,106 @@ def analyze_customer_recency_frequency_segments(
         .to_string()
     )
 
+def analyze_customer_cohorts(df: pd.DataFrame) -> None:
+    """Analyze customers by their first-purchase month."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER COHORT ANALYSIS")
+    print("=" * 70)
+
+    customer_first_purchase = (
+        df.groupby("CustomerID")["InvoiceDate"]
+        .min()
+        .reset_index(name="FirstPurchaseDate")
+    )
+
+    customer_first_purchase["CohortMonth"] = (
+        customer_first_purchase["FirstPurchaseDate"]
+        .dt.to_period("M")
+        .astype(str)
+    )
+
+    customer_summary = (
+        df.groupby("CustomerID")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsPurchased=("Quantity", "sum"),
+            LastPurchaseDate=("InvoiceDate", "max"),
+        )
+        .reset_index()
+    )
+
+    customer_summary = customer_summary.merge(
+        customer_first_purchase,
+        on="CustomerID",
+        how="left",
+    )
+
+    cohort_summary = (
+        customer_summary
+        .groupby("CohortMonth")
+        .agg(
+            Customers=("CustomerID", "count"),
+            Revenue=("Revenue", "sum"),
+            Transactions=("Transactions", "sum"),
+            UnitsPurchased=("UnitsPurchased", "sum"),
+        )
+        .reset_index()
+    )
+
+    total_revenue = cohort_summary["Revenue"].sum()
+    total_customers = cohort_summary["Customers"].sum()
+
+    cohort_summary["CustomerShare"] = (
+        cohort_summary["Customers"]
+        / total_customers
+    )
+
+    cohort_summary["RevenueShare"] = (
+        cohort_summary["Revenue"]
+        / total_revenue
+    )
+
+    cohort_summary["RevenuePerCustomer"] = (
+        cohort_summary["Revenue"]
+        / cohort_summary["Customers"]
+    )
+
+    cohort_summary["TransactionsPerCustomer"] = (
+        cohort_summary["Transactions"]
+        / cohort_summary["Customers"]
+    )
+
+    print("\nCustomer first-purchase cohorts:")
+
+    print(
+        cohort_summary.to_string(index=False)
+    )
+
+    print("\nTotal cohorts:")
+    print(len(cohort_summary))
+
+    print("\nLargest cohorts by customer count:")
+
+    print(
+        cohort_summary
+        .sort_values("Customers", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nLargest cohorts by revenue:")
+
+    print(
+        cohort_summary
+        .sort_values("Revenue", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
+
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -3388,7 +3488,9 @@ def main() -> None:
 
     # analyze_customer_frequency_segments(cleaned_df)
 
-    analyze_customer_recency_frequency_segments(cleaned_df)
+    # analyze_customer_recency_frequency_segments(cleaned_df)
+
+    analyze_customer_cohorts(cleaned_df)
     
     
     print("\n" + "=" * 70)

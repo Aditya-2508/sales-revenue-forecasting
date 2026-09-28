@@ -1848,6 +1848,106 @@ def investigate_revenue_spikes(df: pd.DataFrame) -> None:
             )
         )
 
+def analyze_customer_revenue_concentration(
+    df: pd.DataFrame,
+) -> None:
+    """Analyze customer revenue concentration."""
+
+    print("\n" + "=" * 70)
+    print("CUSTOMER REVENUE CONCENTRATION")
+    print("=" * 70)
+
+    customer_revenue = (
+        df
+        .groupby("CustomerID")
+        .agg(
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            UnitsSold=("Quantity", "sum"),
+        )
+        .reset_index()
+        .sort_values(
+            "Revenue",
+            ascending=False,
+        )
+    )
+
+    total_revenue = customer_revenue["Revenue"].sum()
+
+    customer_revenue["RevenueShare"] = (
+        customer_revenue["Revenue"]
+        / total_revenue
+    )
+
+    customer_revenue["CumulativeRevenueShare"] = (
+        customer_revenue["RevenueShare"]
+        .cumsum()
+    )
+
+    customer_count = len(customer_revenue)
+
+    print("\nCustomer count:")
+    print(customer_count)
+
+    print("\nTotal customer revenue:")
+    print(f"{total_revenue:.2f}")
+
+    print("\nTop 10 customers by revenue:")
+
+    print(
+        customer_revenue
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nRevenue concentration:")
+
+    for percentage in [0.01, 0.05, 0.10, 0.20]:
+
+        count = max(
+            1,
+            int(customer_count * percentage),
+        )
+
+        revenue_share = (
+            customer_revenue
+            .head(count)["Revenue"]
+            .sum()
+            / total_revenue
+        )
+
+        print(
+            f"Top {percentage:.0%} of customers "
+            f"({count} customers): "
+            f"{revenue_share:.2%} of revenue"
+        )
+
+    revenue_80_position = (
+        customer_revenue[
+            customer_revenue["CumulativeRevenueShare"] >= 0.80
+        ]
+        .index[0]
+        + 1
+    )
+
+    revenue_80_percentage = (
+        revenue_80_position / customer_count
+    )
+
+    print("\nCustomers required to reach 80% of revenue:")
+
+    print(
+        f"{revenue_80_position} customers "
+        f"({revenue_80_percentage:.2%} of customers)"
+    )
+
+    print("\nCustomer revenue statistics:")
+
+    print(
+        customer_revenue["Revenue"]
+        .describe()
+        .to_string()
+    )
 
 
 
@@ -1912,8 +2012,11 @@ def main() -> None:
 
     # analyze_daily_revenue_outliers(cleaned_df)
 
-    investigate_revenue_spikes(cleaned_df)
+    # investigate_revenue_spikes(cleaned_df)
 
+    analyze_customer_revenue_concentration(cleaned_df)
+    
+    
     print("\n" + "=" * 70)
     print("FIRST 5 RECORDS")
     print("=" * 70)

@@ -4272,6 +4272,21 @@ def evaluate_xgboost_validation(
         validation_predictions,
     )
 
+def evaluate_validation_baselines(
+    daily_df,
+    train_df,
+    validation_df,
+):
+    """Evaluate naive forecasting baselines on the validation period."""
+
+    print("\n=== VALIDATION BASELINE EVALUATION ===")
+
+    evaluate_naive_forecasts(
+        daily_df,
+        train_df,
+        validation_df,
+    )
+
     
 # ============================================================
 # Main
@@ -4390,6 +4405,11 @@ def main() -> None:
             train_df,
             validation_days=30,
         )
+    )
+    evaluate_validation_baselines(
+        daily_df,
+        validation_train_df,
+        validation_df,
     )
     validation_model, validation_train_predictions, validation_predictions = (
         evaluate_xgboost_validation(

@@ -3623,6 +3623,89 @@ def analyze_cohort_monetary_value(df: pd.DataFrame) -> None:
         .to_string(index=False)
     )
 
+def analyze_time_series_structure(df: pd.DataFrame) -> None:
+    """Analyze temporal structure of daily revenue for forecasting."""
+
+    daily_revenue = (
+        df.assign(SaleDate=df["InvoiceDate"].dt.normalize())
+        .groupby("SaleDate")["Revenue"]
+        .sum()
+    )
+
+    full_date_index = pd.date_range(
+        start=daily_revenue.index.min(),
+        end=daily_revenue.index.max(),
+        freq="D",
+    )
+
+    daily_revenue = daily_revenue.reindex(
+        full_date_index,
+        fill_value=0,
+    )
+
+    daily_revenue.name = "Revenue"
+
+    print("\n=== TIME-SERIES STRUCTURE ===")
+
+    print(f"Calendar days: {len(daily_revenue)}")
+    print(f"Days with recorded sales: {(daily_revenue > 0).sum()}")
+    print(f"Days with zero recorded sales: {(daily_revenue == 0).sum()}")
+    print(f"First date: {daily_revenue.index.min().date()}")
+    print(f"Last date: {daily_revenue.index.max().date()}")
+
+    print("\nDaily revenue statistics:")
+    print(daily_revenue.describe())
+
+    print("\nWeekly seasonality:")
+    weekday_summary = (
+        daily_revenue.groupby(daily_revenue.index.day_name())
+        .agg(
+            AverageRevenue="mean",
+            TotalRevenue="sum",
+            ActiveDays=lambda x: (x > 0).sum(),
+        )
+        .reindex(
+            [
+                "Monday",
+                "Tuesday",
+                "Wednesday",
+                "Thursday",
+                "Friday",
+                "Saturday",
+                "Sunday",
+            ]
+        )
+    )
+
+    print(weekday_summary)
+
+    print("\nRevenue autocorrelation:")
+    for lag in [1, 2, 3, 7, 14, 28]:
+        print(f"Lag {lag:>2}: {daily_revenue.autocorr(lag=lag):.6f}")
+
+    rolling_7 = daily_revenue.rolling(window=7).mean()
+    rolling_30 = daily_revenue.rolling(window=30).mean()
+
+    print("\nRolling revenue:")
+    print(f"Latest 7-day average: {rolling_7.iloc[-1]:.2f}")
+    print(f"Latest 30-day average: {rolling_30.iloc[-1]:.2f}")
+
+    print("\nRolling volatility:")
+    rolling_7_std = daily_revenue.rolling(window=7).std()
+    rolling_30_std = daily_revenue.rolling(window=30).std()
+
+    print(f"Latest 7-day std: {rolling_7_std.iloc[-1]:.2f}")
+    print(f"Latest 30-day std: {rolling_30_std.iloc[-1]:.2f}")
+
+    print("\nDaily revenue changes:")
+    daily_change = daily_revenue.diff()
+
+    print(f"Average daily change: {daily_change.mean():.2f}")
+    print(f"Median daily change: {daily_change.median():.2f}")
+
+    print("\nTime-series analysis complete.")
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -3716,7 +3799,9 @@ def main() -> None:
 
     # analyze_customer_cohort_retention(cleaned_df)
 
-    analyze_cohort_monetary_value(cleaned_df)
+    # analyze_cohort_monetary_value(cleaned_df)
+
+    analyze_time_series_structure(cleaned_df)
     
     
     print("\n" + "=" * 70)

@@ -2517,6 +2517,127 @@ def analyze_customer_recency_and_value(
         recency_distribution.to_string()
     )
 
+def analyze_product_demand(df: pd.DataFrame) -> None:
+    """Analyze product demand and sales volume."""
+
+    print("\n" + "=" * 70)
+    print("PRODUCT DEMAND AND SALES VOLUME ANALYSIS")
+    print("=" * 70)
+
+    product_demand = (
+        df
+        .groupby(
+            ["StockCode", "Description"],
+            dropna=False,
+        )
+        .agg(
+            UnitsSold=("Quantity", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+            Revenue=("Revenue", "sum"),
+            AverageUnitPrice=("UnitPrice", "mean"),
+        )
+        .reset_index()
+    )
+
+    product_demand["RevenuePerTransaction"] = (
+        product_demand["Revenue"]
+        / product_demand["Transactions"]
+    )
+
+    total_units = product_demand["UnitsSold"].sum()
+    total_revenue = product_demand["Revenue"].sum()
+
+    product_demand["UnitShare"] = (
+        product_demand["UnitsSold"]
+        / total_units
+    )
+
+    product_demand["RevenueShare"] = (
+        product_demand["Revenue"]
+        / total_revenue
+    )
+
+    print("\nProduct count:")
+    print(len(product_demand))
+
+    print("\nTotal units sold:")
+    print(total_units)
+
+    print("\nTotal revenue:")
+    print(f"{total_revenue:.2f}")
+
+    print("\nTop 10 products by units sold:")
+
+    print(
+        product_demand
+        .sort_values(
+            "UnitsSold",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 products by transaction count:")
+
+    print(
+        product_demand
+        .sort_values(
+            "Transactions",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 products by revenue:")
+
+    print(
+        product_demand
+        .sort_values(
+            "Revenue",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nHighest average unit prices:")
+
+    print(
+        product_demand
+        .sort_values(
+            "AverageUnitPrice",
+            ascending=False,
+        )
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 products by units sold - unit share:")
+
+    top_units = (
+        product_demand
+        .sort_values(
+            "UnitsSold",
+            ascending=False,
+        )
+        .head(10)
+    )
+
+    print(
+        top_units[
+            [
+                "StockCode",
+                "Description",
+                "UnitsSold",
+                "UnitShare",
+            ]
+        ]
+        .to_string(index=False)
+    )
+
+
 
 # ============================================================
 # Main
@@ -2591,7 +2712,9 @@ def main() -> None:
 
     # analyze_customer_purchase_frequency(cleaned_df)
 
-    analyze_customer_recency_and_value(cleaned_df)
+    # analyze_customer_recency_and_value(cleaned_df)
+
+    analyze_product_demand(cleaned_df)
     
     
     print("\n" + "=" * 70)

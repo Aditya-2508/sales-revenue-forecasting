@@ -2780,6 +2780,98 @@ def analyze_product_demand_concentration(df: pd.DataFrame) -> None:
         .to_string(index=False)
     )
 
+def analyze_product_demand_revenue_relationship(df: pd.DataFrame) -> None:
+    """Analyze the relationship between product demand and revenue."""
+
+    print("\n" + "=" * 70)
+    print("PRODUCT DEMAND VS REVENUE RELATIONSHIP")
+    print("=" * 70)
+
+    product_summary = (
+        df.groupby(
+            ["StockCode", "Description"],
+            dropna=False,
+        )
+        .agg(
+            UnitsSold=("Quantity", "sum"),
+            Revenue=("Revenue", "sum"),
+            Transactions=("InvoiceNo", "nunique"),
+        )
+        .reset_index()
+    )
+
+    product_summary["RevenuePerUnit"] = (
+        product_summary["Revenue"]
+        / product_summary["UnitsSold"]
+    )
+
+    correlation = product_summary[
+        ["UnitsSold", "Revenue"]
+    ].corr().loc["UnitsSold", "Revenue"]
+
+    print("\nProduct count:")
+    print(len(product_summary))
+
+    print("\nCorrelation between units sold and revenue:")
+    print(f"{correlation:.6f}")
+
+    print("\nTop 10 products by units sold with revenue:")
+
+    print(
+        product_summary
+        .sort_values("UnitsSold", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 products by revenue with units sold:")
+
+    print(
+        product_summary
+        .sort_values("Revenue", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
+
+    units_top_10 = set(
+        product_summary
+        .nlargest(10, "UnitsSold")["StockCode"]
+    )
+
+    revenue_top_10 = set(
+        product_summary
+        .nlargest(10, "Revenue")["StockCode"]
+    )
+
+    overlap = units_top_10.intersection(revenue_top_10)
+
+    print("\nTop-10 ranking overlap:")
+    print(len(overlap))
+
+    print("\nProducts appearing in both top-10 groups:")
+    print(sorted(overlap, key=str))
+
+    print("\nTop 10 products by revenue per unit:")
+
+    print(
+        product_summary
+        .sort_values("RevenuePerUnit", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
+
+    print("\nTop 10 high-volume products by revenue per unit:")
+
+    high_volume_products = product_summary[
+        product_summary["UnitsSold"] >= product_summary["UnitsSold"].quantile(0.90)
+    ]
+
+    print(
+        high_volume_products
+        .sort_values("RevenuePerUnit", ascending=False)
+        .head(10)
+        .to_string(index=False)
+    )
 
 # ============================================================
 # Main
@@ -2858,7 +2950,9 @@ def main() -> None:
 
     # analyze_product_demand(cleaned_df)
 
-    analyze_product_demand_concentration(cleaned_df)
+    # analyze_product_demand_concentration(cleaned_df)
+
+    analyze_product_demand_revenue_relationship(cleaned_df)
     
     
     print("\n" + "=" * 70)

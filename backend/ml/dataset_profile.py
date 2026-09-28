@@ -3857,6 +3857,51 @@ def evaluate_naive_forecasts(
 
     print("\nBaseline evaluation complete.")
 
+def create_forecasting_features(
+    daily_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Create leakage-safe calendar, lag, and rolling features."""
+
+    feature_df = daily_df.copy()
+    feature_df = feature_df.sort_values("Date").reset_index(drop=True)
+
+    feature_df["DayOfWeek"] = feature_df["Date"].dt.dayofweek
+    feature_df["DayOfMonth"] = feature_df["Date"].dt.day
+    feature_df["Month"] = feature_df["Date"].dt.month
+    feature_df["WeekOfYear"] = feature_df["Date"].dt.isocalendar().week.astype(int)
+    feature_df["IsWeekend"] = (
+        feature_df["DayOfWeek"] >= 5
+    ).astype(int)
+
+    feature_df["Lag1"] = feature_df["Revenue"].shift(1)
+    feature_df["Lag7"] = feature_df["Revenue"].shift(7)
+    feature_df["Lag14"] = feature_df["Revenue"].shift(14)
+    feature_df["Lag28"] = feature_df["Revenue"].shift(28)
+
+    historical_revenue = feature_df["Revenue"].shift(1)
+
+    feature_df["RollingMean7"] = (
+        historical_revenue.rolling(window=7).mean()
+    )
+
+    feature_df["RollingMean28"] = (
+        historical_revenue.rolling(window=28).mean()
+    )
+
+    print("\n=== FORECASTING FEATURES ===")
+
+    print(f"Rows: {len(feature_df)}")
+    print(f"Columns: {list(feature_df.columns)}")
+
+    print("\nFeature missing values:")
+    print(feature_df.isna().sum())
+
+    print("\nFeature preview:")
+    print(feature_df.head(35))
+
+    return feature_df
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -3958,13 +4003,15 @@ def main() -> None:
 
     # create_forecasting_split(daily_df)
 
-    train_df, test_df = create_forecasting_split(daily_df)
+    # train_df, test_df = create_forecasting_split(daily_df)
 
-    evaluate_naive_forecasts(
-        daily_df,
-        train_df,
-        test_df,
-    )
+    # evaluate_naive_forecasts(
+    #     daily_df,
+    #     train_df,
+    #     test_df,
+    # )
+
+    create_forecasting_features(daily_df)
     
     
     print("\n" + "=" * 70)

@@ -1,6 +1,7 @@
 from pathlib import Path
 
 import pandas as pd
+from backend.ml.services.result import ForecastResult
 
 from backend.ml.evaluation.pipeline import run_forecast_evaluation
 from backend.ml.features.forecasting_features import create_forecasting_features
@@ -19,7 +20,7 @@ from backend.ml.preprocessing.cleaning import clean_sales_data
 def run_forecasting_service(
     raw_df: pd.DataFrame,
     output_path: str | Path,
-) -> dict:
+) -> ForecastResult:
     """
     Execute the complete revenue forecasting workflow.
     """
@@ -59,12 +60,11 @@ def run_forecasting_service(
         output_path=output_path,
     )
 
-    return {
-        "forecast": forecast_df,
-        "metrics": metrics,
-        "validation": validation,
-        "output_path": output_file,
-        "model": model,
-        "training_rows": len(train_df),
-        "test_rows": len(test_df),
-    }
+    return ForecastResult(
+        forecast=forecast_df,
+        metrics=metrics,
+        validation=validation,
+        output_path=output_file,
+        training_rows=len(train_df),
+        test_rows=len(test_df),
+    )

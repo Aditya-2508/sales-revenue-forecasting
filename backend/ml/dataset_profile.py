@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pandas as pd
 import numpy as np
+from xgboost import XGBRegressor
 
 
 # ============================================================
@@ -4376,6 +4377,107 @@ def run_xgboost_validation_experiments(
 
     return results_df
 
+def run_walk_forward_validation(
+    model_df,
+    feature_columns,
+    validation_days=30,
+    windows=3,
+):
+    """Run chronological walk-forward validation."""
+
+    results = []
+
+    total_rows = len(model_df)
+
+    for window in range(windows):
+        validation_end = total_rows - (windows - window - 1) * validation_days
+        validation_start = validation_end - validation_days
+
+        train_end = validation_start
+
+        if train_end <= 0:
+            raise ValueError(
+                "Not enough data for the requested walk-forward windows."
+            )
+
+        train_df = model_df.iloc[:train_end].copy()
+        validation_df = model_df.iloc[
+            validation_start:validation_end
+        ].copy()
+
+        model = XGBRegressor(
+            objective="reg:squarederror",
+            n_estimators=300,
+            learning_rate=0.05,
+            max_depth=6,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            random_state=42,
+            n_jobs=-1,
+        )
+
+        X_train = train_df[feature_columns]
+        y_train = train_df["Revenue"]
+
+        X_validation = validation_df[feature_columns]
+        y_validation = validation_df["Revenue"]
+
+        model.fit(X_train, y_train)
+
+        predictions = model.predict(X_validation)
+
+        errors = y_validation.to_numpy() - predictions
+
+        mae = np.mean(np.abs(errors))
+        rmse = np.sqrt(np.mean(errors ** 2))
+
+        actual_sum = np.sum(
+            np.abs(y_validation.to_numpy())
+        )
+
+        if actual_sum == 0:
+            wape = np.nan
+        else:
+            wape = np.sum(np.abs(errors)) / actual_sum
+
+        results.append(
+            {
+                "Window": window + 1,
+                "TrainRows": len(train_df),
+                "ValidationRows": len(validation_df),
+                "TrainStart": train_df["Date"].min(),
+                "TrainEnd": train_df["Date"].max(),
+                "ValidationStart": validation_df["Date"].min(),
+                "ValidationEnd": validation_df["Date"].max(),
+                "MAE": mae,
+                "RMSE": rmse,
+                "WAPE": wape,
+                "NegativePredictions": int(
+                    np.sum(predictions < 0)
+                ),
+            }
+        )
+
+    results_df = pd.DataFrame(results)
+
+    print("\n=== WALK-FORWARD VALIDATION ===")
+    print(results_df.to_string(index=False))
+
+    print("\nAverage metrics:")
+    print(
+        "MAE:",
+        results_df["MAE"].mean(),
+    )
+    print(
+        "RMSE:",
+        results_df["RMSE"].mean(),
+    )
+    print(
+        "WAPE:",
+        results_df["WAPE"].mean(),
+    )
+
+    return results_df
 
 # ============================================================
 # Main
@@ -4494,6 +4596,12 @@ def main() -> None:
             train_df,
             validation_days=30,
         )
+    )
+    run_walk_forward_validation(
+        train_df,
+        feature_columns,
+        validation_days=30,
+        windows=3,
     )
     evaluate_validation_baselines(
         daily_df,

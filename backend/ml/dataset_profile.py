@@ -4587,6 +4587,42 @@ def run_walk_forward_baselines(
 
     return results_df
 
+def summarize_walk_forward_results(
+    xgboost_df: pd.DataFrame,
+    baseline_df: pd.DataFrame,
+) -> pd.DataFrame:
+    """Summarize walk-forward performance across forecasting methods."""
+
+    summary = pd.DataFrame(
+        {
+            "Model": [
+                "XGBoost",
+                "Seasonal Naive",
+                "Last Observed Value",
+            ],
+            "Average MAE": [
+                xgboost_df["MAE"].mean(),
+                baseline_df["SeasonalNaiveMAE"].mean(),
+                baseline_df["LastObservedMAE"].mean(),
+            ],
+            "Average RMSE": [
+                xgboost_df["RMSE"].mean(),
+                baseline_df["SeasonalNaiveRMSE"].mean(),
+                baseline_df["LastObservedRMSE"].mean(),
+            ],
+            "Average WAPE": [
+                xgboost_df["WAPE"].mean(),
+                baseline_df["SeasonalNaiveWAPE"].mean(),
+                baseline_df["LastObservedWAPE"].mean(),
+            ],
+        }
+    )
+
+    summary["Average MAE"] = summary["Average MAE"].round(2)
+    summary["Average RMSE"] = summary["Average RMSE"].round(2)
+    summary["Average WAPE"] = summary["Average WAPE"].round(6)
+
+    return summary
 
 # ============================================================
 # Main
@@ -4706,18 +4742,29 @@ def main() -> None:
             validation_days=30,
         )
     )
-    run_walk_forward_validation(
+    walk_forward_results = run_walk_forward_validation(
         train_df,
         feature_columns,
         validation_days=30,
         windows=3,
     )
-    run_walk_forward_baselines(
+    walk_forward_comparison  = run_walk_forward_baselines(
         daily_df,
         train_df,
         validation_days=30,
         windows=3,
     )
+
+
+    evaluation_summary = summarize_walk_forward_results(
+        walk_forward_results,
+        walk_forward_comparison,
+    )
+
+    print("\nWalk-forward evaluation summary:")
+    print(evaluation_summary.to_string(index=False))
+
+
     evaluate_validation_baselines(
         daily_df,
         validation_train_df,

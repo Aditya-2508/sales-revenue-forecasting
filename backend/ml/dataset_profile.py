@@ -4479,6 +4479,115 @@ def run_walk_forward_validation(
 
     return results_df
 
+def run_walk_forward_baselines(
+    daily_df,
+    model_df,
+    validation_days=30,
+    windows=3,
+):
+    """Evaluate naive baselines across the same walk-forward windows."""
+
+    results = []
+
+    total_rows = len(model_df)
+
+    for window in range(windows):
+        validation_end = (
+            total_rows
+            - (windows - window - 1) * validation_days
+        )
+
+        validation_start = validation_end - validation_days
+        train_end = validation_start
+
+        train_model_df = model_df.iloc[:train_end].copy()
+        validation_model_df = model_df.iloc[
+            validation_start:validation_end
+        ].copy()
+
+        train_end_date = train_model_df["Date"].max()
+        validation_end_date = validation_model_df["Date"].max()
+
+        daily_train_df = daily_df[
+            daily_df["Date"] <= train_end_date
+        ].copy()
+
+        daily_validation_df = daily_df[
+            (daily_df["Date"] > train_end_date)
+            & (daily_df["Date"] <= validation_end_date)
+        ].copy()
+
+        actual = daily_validation_df["Revenue"].to_numpy()
+
+        last_value_predictions = np.full(
+            len(actual),
+            daily_train_df["Revenue"].iloc[-1],
+        )
+
+        seasonal_predictions = daily_validation_df["Date"].apply(
+            lambda date: daily_df.loc[
+                daily_df["Date"] == date - pd.Timedelta(days=7),
+                "Revenue",
+            ].iloc[0]
+        ).to_numpy()
+
+        last_errors = actual - last_value_predictions
+        seasonal_errors = actual - seasonal_predictions
+
+        actual_sum = np.sum(np.abs(actual))
+
+        last_wape = (
+            np.sum(np.abs(last_errors)) / actual_sum
+            if actual_sum != 0
+            else np.nan
+        )
+
+        seasonal_wape = (
+            np.sum(np.abs(seasonal_errors)) / actual_sum
+            if actual_sum != 0
+            else np.nan
+        )
+
+        results.append(
+            {
+                "Window": window + 1,
+                "LastObservedMAE": np.mean(
+                    np.abs(last_errors)
+                ),
+                "LastObservedRMSE": np.sqrt(
+                    np.mean(last_errors ** 2)
+                ),
+                "LastObservedWAPE": last_wape,
+                "SeasonalNaiveMAE": np.mean(
+                    np.abs(seasonal_errors)
+                ),
+                "SeasonalNaiveRMSE": np.sqrt(
+                    np.mean(seasonal_errors ** 2)
+                ),
+                "SeasonalNaiveWAPE": seasonal_wape,
+            }
+        )
+
+    results_df = pd.DataFrame(results)
+
+    print("\n=== WALK-FORWARD BASELINE VALIDATION ===")
+    print(results_df.to_string(index=False))
+
+    print("\nAverage baseline metrics:")
+
+    print(
+        "Last Observed WAPE:",
+        results_df["LastObservedWAPE"].mean(),
+    )
+
+    print(
+        "Seasonal Naive WAPE:",
+        results_df["SeasonalNaiveWAPE"].mean(),
+    )
+
+    return results_df
+
+
 # ============================================================
 # Main
 # ============================================================
@@ -4600,6 +4709,12 @@ def main() -> None:
     run_walk_forward_validation(
         train_df,
         feature_columns,
+        validation_days=30,
+        windows=3,
+    )
+    run_walk_forward_baselines(
+        daily_df,
+        train_df,
         validation_days=30,
         windows=3,
     )

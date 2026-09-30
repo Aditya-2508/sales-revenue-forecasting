@@ -24,3 +24,6 @@ models/
 # IDE
 .vscode/
 .idea/
+
+# Django
+backend/db.sqlite3

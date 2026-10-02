@@ -1,4 +1,5 @@
 import "./App.css";
+import SummaryOverview from "./components/SummaryOverview";
 
 function App() {
   return (
@@ -41,14 +42,7 @@ function App() {
           </p>
         </section>
 
-        <section className="empty-state" aria-labelledby="dashboard-heading">
-          <p className="section-label">Dashboard</p>
-          <h2 id="dashboard-heading">Data connection coming next</h2>
-          <p>
-            The dashboard will display verified sales and forecasting results
-            from the Django API.
-          </p>
-        </section>
+        <SummaryOverview />
       </main>
     </div>
   );

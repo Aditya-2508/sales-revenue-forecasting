@@ -13,3 +13,7 @@ async function request(endpoint) {
 export function fetchSalesSummary() {
   return request("/analytics/summary/");
 }
+
+export function fetchDailyRevenue() {
+  return request("/analytics/revenue/");
+}

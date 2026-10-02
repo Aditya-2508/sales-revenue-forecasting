@@ -2,11 +2,11 @@ import { useEffect, useState } from "react";
 import { fetchSalesSummary } from "../services/api";
 
 function formatNumber(value) {
-  return new Intl.NumberFormat("en-IN").format(value);
+  return new Intl.NumberFormat("en-GB").format(value);
 }
 
 function formatCurrency(value) {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-GB", {
     style: "currency",
     currency: "GBP",
     maximumFractionDigits: 2,

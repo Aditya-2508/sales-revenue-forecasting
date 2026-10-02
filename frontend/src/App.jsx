@@ -1,4 +1,5 @@
 import "./App.css";
+import RevenueChart from "./components/RevenueChart";
 import SummaryOverview from "./components/SummaryOverview";
 
 function App() {
@@ -43,6 +44,7 @@ function App() {
         </section>
 
         <SummaryOverview />
+        <RevenueChart />
       </main>
     </div>
   );

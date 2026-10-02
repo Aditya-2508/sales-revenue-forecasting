@@ -8,6 +8,14 @@ from apps.customers.models import Customer
 from apps.products.models import Product
 from apps.transactions.models import Transaction
 
+from pathlib import Path
+
+from django.conf import settings
+
+from apps.analytics.services.forecast_adapter import transactions_to_dataframe
+from ml.services.forecasting import run_forecasting_service
+from ml.services.response import build_forecast_response
+
 
 class SalesSummaryView(APIView):
     def get(self, request):
@@ -60,3 +68,24 @@ class DailyRevenueView(APIView):
             current_date += timedelta(days=1)
 
         return Response(results)
+    
+
+class ForecastView(APIView):
+    def get(self, request):
+        raw_df = transactions_to_dataframe()
+
+        output_path = (
+            Path(settings.BASE_DIR).parent
+            / "data"
+            / "forecasts"
+            / "latest_forecast.csv"
+        )
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        result = run_forecasting_service(
+            raw_df=raw_df,
+            output_path=output_path,
+        )
+
+        return Response(build_forecast_response(result))

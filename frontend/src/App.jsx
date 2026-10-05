@@ -1,6 +1,7 @@
 import "./App.css";
 import RevenueChart from "./components/RevenueChart";
 import SummaryOverview from "./components/SummaryOverview";
+import ForecastOverview from "./components/ForecastOverview";
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
 
         <SummaryOverview />
         <RevenueChart />
+        <ForecastOverview />
       </main>
     </div>
   );

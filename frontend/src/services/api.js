@@ -17,3 +17,7 @@ export function fetchSalesSummary() {
 export function fetchDailyRevenue() {
   return request("/analytics/revenue/");
 }
+
+export function fetchForecast() {
+  return request("/analytics/forecast/");
+}
